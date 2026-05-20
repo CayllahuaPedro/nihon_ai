@@ -1,0 +1,43 @@
+# Private planning docs
+ROADMAP.private.md
+*.private.md
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# ML artifacts & data
+data/
+models/
+checkpoints/
+*.ckpt
+*.safetensors
+wandb/
+
+# Vector store
+.chroma/
+chroma/
+
+# Anki exports
+*.apkg
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

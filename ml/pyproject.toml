@@ -1,0 +1,21 @@
+[project]
+name = "nihon-ai-ml"
+version = "0.1.0"
+description = "Nihon AI — ML training & research (JLPT classifier fine-tuning)"
+requires-python = ">=3.11"
+dependencies = [
+    "transformers>=4.46",
+    "torch>=2.5",
+    "datasets>=3.1",
+    "evaluate>=0.4",
+    "accelerate>=1.1",
+    "scikit-learn>=1.5",
+    "fugashi[unidic-lite]>=1.3",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+dev = ["jupyter", "matplotlib", "seaborn", "ruff>=0.7"]
+
+[tool.ruff]
+line-length = 100
