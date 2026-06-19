@@ -1,12 +1,19 @@
 # JLPT Classifier — Phase 0: shared item_key() core + weak-label ETL
 
-Status: design, approved (2026-06-18). Not yet implemented.
+Status: design, approved (2026-06-18). Implementation started 2026-06-18.
 
-Phase 0 (v1.0) of the JLPT classifier: data-first, before any fine-tune. This session
-builds the cross-cutting tokenization core (`item_key()`) and the full ETL that turns
-Tatoeba Japanese sentences into a weak-labeled JLPT dataset, ending in an EDA notebook
-whose job is to **decide** open thresholds — not to explore for its own sake. No BERT
-fine-tuning here; that is v1.1 and starts only after the notebook answers its questions.
+> **Role updated (2026-06-18, see `ROADMAP.private.md` → "v1 RECUT (ACTIVE)").** BERT fine-tune
+> left the v1 critical path. The labeling function built here is **no longer just a teacher for a
+> downstream BERT — it is the vocab-difficulty estimator that ships in v1 and feeds the tutor.**
+> There is no BERT below it cleaning up noise, so its product-facing quality bar is higher: the
+> OOV-gate (abstention) and label-quality spot-check in §7 are now product criteria, not just
+> training-data sanity checks. The technical design below is unchanged; only the role of its output is.
+
+Phase 0 (v1.0) of the vocab-difficulty estimator: data-first. This session builds the
+cross-cutting tokenization core (`item_key()`) and the full ETL that turns Tatoeba Japanese
+sentences into a weak-labeled JLPT dataset, ending in an EDA notebook whose job is to **decide**
+open thresholds — not to explore for its own sake. The fine-tuned BERT that would generalize past
+this labeling function is **post-launch roadmap**, not the immediate next step.
 
 Builds on the approved [item model contract](2026-06-17-item-model-contract-design.md):
 this spec is the first implementation of that contract's `item_key()`.
@@ -161,11 +168,15 @@ idempotent and takes `--limit N` for fast iteration.
 - **Coverage sweep → fixes `X`**, showing how the label distribution shifts with `X`.
 - **Abstention rate** at the chosen `τ_oov` (also the signal for whether the section-4
   fallback keying is needed).
-- **Label-quality spot-check:** ~30–50 sentences, weak-label vs. human judgment, drawn from
-  the N5/N4 band where Pedro is a reliable labeler.
+- **Label-quality spot-check (now a product gate, not a data sanity check):** ~50–80 sentences,
+  weak-label vs. human judgment, drawn from the N5/N4 band where Pedro is a reliable labeler.
+  Because this labeling function *ships* (no BERT downstream to clean noise), the notebook must
+  state an explicit accept criterion — a minimum spot-check agreement and a maximum tolerable
+  abstention rate — and a fallback if it isn't met (relax the §4 lookup keying, or narrow the
+  served range to the bands that do meet the bar).
 
-Deliverable: a short written findings note (in the notebook) carrying these conclusions
-forward to v1.1.
+Deliverable: a short written findings note (in the notebook) carrying these conclusions forward —
+both to the shipped v1 estimator and to the post-launch BERT fine-tune.
 
 ## 8. Testing (TDD)
 

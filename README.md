@@ -16,15 +16,17 @@
 
 ## Who this is for
 
-**👩‍💻 If you're an engineer** — This is a full-stack ML _product_, not a notebook. A fine-tuned
-Japanese BERT classifier, a retrieval-augmented LLM tutor, and a learner-personalization model,
-wired into a FastAPI backend and a Next.js frontend, designed to be deployed and actually used.
+**👩‍💻 If you're an engineer** — This is a full-stack ML _product_, not a notebook. A
+retrieval-augmented LLM tutor constrained by a per-learner **known-set**, a vocabulary-difficulty
+estimator built with **weak supervision**, and an i+1 sentence miner — wired into a FastAPI backend
+and a Next.js frontend, designed to be deployed and actually used.
 
 **🧭 If you're hiring** — Skills demonstrated end-to-end:
-`Python` · `FastAPI` · `Next.js / TypeScript` · `PyTorch` · `HuggingFace Transformers` ·
-`model fine-tuning` · `NLP` · `text classification` · `RAG` · `embeddings` · `vector search (ChromaDB)` ·
-`LLM integration (Anthropic Claude API)` · `prompt engineering` · `REST API design` · `Docker` ·
-`full-stack development`. Built and shipped solo, from dataset to deployment.
+`RAG` · `LLM integration (Anthropic Claude API)` · `prompt engineering` · `known-set / constraint injection` ·
+`embeddings` · `vector search (ChromaDB)` · `NLP` · `weak supervision` · `Python` · `FastAPI` ·
+`Next.js / TypeScript` · `REST API design` · `Docker` · `full-stack development`. Built and shipped
+solo, from dataset to deployment. **Roadmap** adds two fine-tuned Japanese transformers (JLPT
+classifier, grammar-point detector) — see [Coming soon](#-coming-soon).
 
 **🎌 If you're learning Japanese** — The tool I wished existed after 5 years of immersion learning.
 It doesn't make you decide what to study. It looks at what you already know, finds the content
@@ -37,41 +39,41 @@ _without_ throwing N1 grammar at you when you're still on N4.
 
 | Skill | How it's shown |
 | --- | --- |
-| NLP / text classification | Fine-tuned JLPT difficulty classifier (N5–N1) |
-| Model fine-tuning (HuggingFace) | `cl-tohoku/bert-base-japanese-v3` adapted to a custom dataset |
+| RAG + LLM integration | Level-aware tutor: Claude grounded on your text, constrained by your known-set |
 | Personalization / modeling | Per-user "known-set" model that overrides static difficulty labels |
-| RAG + LLM integration | Level-aware tutor: Claude grounded on the user's text + known-set |
+| NLP / weak supervision | Vocabulary-difficulty estimator (N5–N1 axis) from JLPT lists + an OOV-gated labeling function |
 | Full-stack product design | Next.js frontend + FastAPI backend, deployed |
 | Domain UX | Workflow built for real immersion learners, not a generic demo |
+| Model fine-tuning (roadmap) | JLPT BERT classifier + grammar-point detector — see [Coming soon](#-coming-soon) |
 
 ---
 
 ## v1 — Planned features
 
-### 1. JLPT Difficulty Classifier
-A fine-tuned Japanese BERT model that predicts whether a text is **N5, N4, N3, N2 or N1**.
-It serves as the **cold-start prior** — the difficulty estimate the system uses before it has
-learned anything about you personally. Reported metrics: per-level accuracy and confusion matrix.
-
-### 2. Learner Model (your "known-set")
-Nihon AI tracks the vocabulary and grammar you mark as known. Difficulty stops being a fixed
-label and becomes **the percentage of tokens that are unknown _to you_**. JLPT is just the
-starting guess; your own reading history takes over.
-
-### 3. Auto-Mining Engine
-Solves the single biggest reason people quit sentence mining: _"I don't know what to mine."_
-Instead of making you curate, Nihon AI surfaces **1T sentences** (sentences with exactly one
-unknown word), ranked by corpus frequency so you spend effort on high-ROI words first.
-You just approve or reject — then export straight to Anki (`.apkg`).
-
-### 4. Level-Aware AI Tutor
+### 1. Level-Aware AI Tutor — _the centerpiece_
 A RAG chatbot over the text you're reading, powered by the Claude API. The difference: your
 known-set is injected as a **constraint**, so the tutor explains using only grammar and
-vocabulary you already know — and flags passages that are above your current level.
+vocabulary you already know — and flags passages that are above your current level. This is
+where personalization, retrieval and constraint prompting come together.
 
-### 5. Progress Dashboard
-Reading volume, JLPT distribution of what you've consumed, growth of your known-word count,
-and a recommended next difficulty ("your comfort zone is N4 — try more N3").
+### 2. Learner Model (your "known-set")
+Nihon AI tracks the vocabulary you mark as known. Difficulty stops being a fixed label and
+becomes **the percentage of tokens that are unknown _to you_**. The vocabulary axis is just the
+starting guess; your own reading history takes over.
+
+### 3. Vocabulary-Difficulty Estimator
+Difficulty is multi-axis, not one number — so vocabulary is modeled as **its own deliberately
+separated axis**. From public JLPT vocab/kanji lists, an OOV-gated labeling function places a text
+on the **N5–N4–N3–N2–N1** scale (and abstains, rather than faking a level, when the text falls
+outside the JLPT frame). It serves as the **cold-start prior** before the system has learned
+anything about you. _Roadmap: a fine-tuned Japanese BERT that generalizes past the lookup teacher
+— see [Coming soon](#-coming-soon)._
+
+### 4. Auto-Mining Engine
+Solves the single biggest reason people quit sentence mining: _"I don't know what to mine."_
+Instead of making you curate, Nihon AI surfaces **1T sentences** (sentences with exactly one
+unknown word), ranked by frequency so you spend effort on high-ROI words first.
+You just approve or reject — then export straight to Anki (`.apkg`).
 
 ---
 
@@ -90,18 +92,20 @@ and a recommended next difficulty ("your comfort zone is N4 — try more N3").
     │               │                 │                  │
     ▼               ▼                 ▼                  ▼
 ┌─────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  BERT   │  │ Learner model│  │  ChromaDB    │  │  Claude API  │
-│  JLPT   │  │ (known-set)  │  │ multilingual │  │  level-aware │
-│classifier│ │   SQLite     │  │     -e5      │  │    tutor     │
+│  Vocab  │  │ Learner model│  │  ChromaDB    │  │  Claude API  │
+│difficulty│ │ (known-set)  │  │ multilingual │  │  level-aware │
+│ (N5–N1) │  │   SQLite     │  │     -e5      │  │    tutor     │
 └─────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+  (weak-label; BERT fine-tune on the roadmap)
 ```
 
 ---
 
 ## Tech stack
 
-- **ML/NLP** — PyTorch, HuggingFace Transformers, `cl-tohoku/bert-base-japanese-v3`,
-  `intfloat/multilingual-e5-base`, `fugashi` for Japanese tokenization
+- **ML/NLP** — `fugashi` + UniDic for Japanese tokenization, weak-supervision labeling,
+  `intfloat/multilingual-e5-base` embeddings _(roadmap: PyTorch + HuggingFace Transformers,
+  fine-tuned `cl-tohoku/bert-base-japanese-v3`)_
 - **Backend** — Python 3.11, FastAPI, ChromaDB, SQLite, Anthropic SDK
 - **Frontend** — Next.js 15, TypeScript, Tailwind CSS
 - **Infra** — Docker, HuggingFace Spaces (model), Railway/Vercel (app)
@@ -110,11 +114,18 @@ and a recommended next difficulty ("your comfort zone is N4 — try more N3").
 
 ## 🔜 Coming soon
 
-Planned beyond v1 — see the project for v1.5 and v2 details.
+Planned beyond the shipped v1 — see the project for full details.
 
-### v1.5
+### Next (post-launch)
+- **Fine-tuned JLPT classifier** — a Japanese BERT trained on the weak-labeled dataset, to
+  generalize past the lookup-based labeling function that ships first.
 - **Grammar Point Detector** — multi-label detection of which Genki/Bunpro grammar points
-  appear in a sentence, for far sharper comprehension estimates than vocabulary alone.
+  appear in a sentence (the second difficulty axis), for far sharper comprehension estimates
+  than vocabulary alone.
+- **Knowledge-tracing learner model** — model recall decay over time (FSRS in-product; deep
+  knowledge tracing benchmarked on a public multi-user dataset).
+- **Progress Dashboard** — reading volume, JLPT distribution, known-word growth, and a
+  recommended next difficulty ("your comfort zone is N4 — try more N3").
 
 ### v2
 - **ASR Pipeline** — generate Japanese subtitles for any YouTube video or audio file, so you're
