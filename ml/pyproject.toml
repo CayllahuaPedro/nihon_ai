@@ -1,21 +1,37 @@
 [project]
 name = "nihon-ai-ml"
 version = "0.1.0"
-description = "Nihon AI — ML training & research (JLPT classifier fine-tuning)"
+description = "Nihon AI — ML data ETL & research (weak-label vocab-difficulty; JLPT fine-tune on the roadmap)"
 requires-python = ">=3.11"
 dependencies = [
+    "fugashi[unidic-lite]>=1.3",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+# BERT fine-tune is post-launch roadmap (see ROADMAP.private.md "v1 RECUT"); kept out of the
+# default install so Phase 0 stays light and CPU-only.
+bert = [
     "transformers>=4.46",
     "torch>=2.5",
     "datasets>=3.1",
     "evaluate>=0.4",
     "accelerate>=1.1",
     "scikit-learn>=1.5",
-    "fugashi[unidic-lite]>=1.3",
-    "pandas>=2.2",
 ]
+dev = ["pytest>=8.0", "jupyter", "matplotlib", "seaborn", "ruff>=0.7"]
 
-[project.optional-dependencies]
-dev = ["jupyter", "matplotlib", "seaborn", "ruff>=0.7"]
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["nihon_ml*"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
