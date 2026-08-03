@@ -1,9 +1,11 @@
-"""Weak JLPT labeling: coverage + OOV gate (spec §5).
+"""Weak JLPT labeling: coverage + OOV gate, gated further by sentence length (spec §5, v1.1
+short-sentence gate).
 
-Two numbers, never fused: an OOV rate that gates whether the sentence is even inside the JLPT
-frame, and — only if the gate passes — a level from cumulative coverage over the in-frame tokens.
-`LabelResult` stores the *ingredients*; `weak_label(tau_oov, X)` is a pure function of them, so a
-threshold can be re-decided without re-tokenizing.
+Three numbers, never fused: an OOV rate that gates whether the sentence is even inside the JLPT
+frame, a content-word count that gates whether the sentence is even long enough to judge, and —
+only if both gates pass — a level from cumulative coverage over the in-frame tokens.
+`LabelResult` stores the *ingredients*; `weak_label(tau_oov, X, min_content)` is a pure function
+of them, so a threshold can be re-decided without re-tokenizing.
 """
 
 from dataclasses import dataclass, field
@@ -23,7 +25,9 @@ class LabelResult:
     n_in_frame: int  # trackable tokens that carry a JLPT level
     level_counts: dict[int, int] = field(default_factory=dict)
 
-    def weak_label(self, tau_oov: float, X: float) -> int:
+    def weak_label(self, tau_oov: float, X: float, min_content: int = 3) -> int:
+        if self.n_content < min_content:
+            return ABSTAIN
         if self.oov_rate > tau_oov or self.n_in_frame == 0:
             return ABSTAIN
         cumulative = 0

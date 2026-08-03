@@ -51,3 +51,17 @@ def test_no_leveled_content_abstains():
     res = label_sentence("東京とパリ", levels())
     assert res.n_in_frame == 0
     assert res.weak_label(tau_oov=0.99, X=0.75) == ABSTAIN
+
+
+def test_short_sentence_below_min_content_abstains():
+    # 猫 alone: oov_rate=0.0, n_in_frame=1 -> would pass tau_oov=0.5 easily,
+    # but n_content=1 < the default min_content=3, so it must still abstain.
+    lv = levels(("猫", 0))
+    res = label_sentence("猫", lv)
+
+    assert res.n_content == 1
+    assert res.oov_rate == 0.0
+    assert res.weak_label(tau_oov=0.5, X=0.75) == ABSTAIN
+    # Explicit min_content=0 disables the gate, confirming it's a real precondition
+    # and not an accidental side effect of another check.
+    assert res.weak_label(tau_oov=0.5, X=0.75, min_content=0) == 0
