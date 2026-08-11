@@ -1,12 +1,24 @@
 import pytest
 
-from nihon_ml.jlpt.spotcheck import SpotcheckResult, score_spotcheck
+from nihon_ml.jlpt.spotcheck import (
+    SpotcheckResult,
+    merge_human_labels,
+    pending,
+    score_spotcheck,
+)
 
 LEVELS = ["n5", "n4", "n3", "n2", "n1"]
 
 
 def rows(*pairs):
     return [{"weak_label": w, "human_label": h} for w, h in pairs]
+
+
+def sheet(*triples):
+    return [
+        {"sentence_id": sid, "text": text, "weak_label": weak, "human_label": "", "agree": ""}
+        for sid, text, weak in triples
+    ]
 
 
 def test_agreement_is_exact_match_rate():
@@ -66,3 +78,40 @@ def test_result_is_reportable():
     assert isinstance(res, SpotcheckResult)
     assert res.confusion[("n4", "n5")] == 1
     assert res.confusion[("n5", "n5")] == 1
+
+
+def test_merge_fills_human_label_and_agreement():
+    merged = merge_human_labels(
+        sheet(("1", "猫が好きです。", "n5"), ("2", "彼女は普通８時間眠ります。", "n4")),
+        {"1": "n5", "2": "n5"},
+    )
+
+    assert [r["human_label"] for r in merged] == ["n5", "n5"]
+    assert [r["agree"] for r in merged] == ["yes", "no"]
+
+
+def test_merge_leaves_unanswered_rows_blank():
+    merged = merge_human_labels(sheet(("1", "a", "n5"), ("2", "b", "n4")), {"1": "n4"})
+
+    assert merged[1]["human_label"] == ""
+    assert merged[1]["agree"] == ""
+
+
+def test_merge_does_not_mutate_the_input_rows():
+    original = sheet(("1", "a", "n5"))
+    merge_human_labels(original, {"1": "n5"})
+
+    assert original[0]["human_label"] == ""
+
+
+def test_merge_rejects_an_answer_for_an_unknown_sentence():
+    # A stale answer file against a resampled spot-check must not be merged silently —
+    # it would attach a judgment to a sentence the human never saw.
+    with pytest.raises(ValueError, match="99"):
+        merge_human_labels(sheet(("1", "a", "n5")), {"1": "n5", "99": "n4"})
+
+
+def test_pending_returns_unanswered_rows_in_order():
+    todo = pending(sheet(("1", "a", "n5"), ("2", "b", "n4"), ("3", "c", "n5")), {"2": "n4"})
+
+    assert [r["sentence_id"] for r in todo] == ["1", "3"]

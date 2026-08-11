@@ -39,6 +39,38 @@ def _level(value: str, column: str) -> str:
     return value
 
 
+def pending(
+    rows: Iterable[Mapping[str, str]], answers: Mapping[str, str]
+) -> list[Mapping[str, str]]:
+    """Rows still awaiting a human judgment, in sheet order — the resume queue."""
+    return [r for r in rows if str(r["sentence_id"]) not in answers]
+
+
+def merge_human_labels(
+    rows: Iterable[Mapping[str, str]], answers: Mapping[str, str]
+) -> list[dict[str, str]]:
+    """Fold a blind labelling pass back into the spot-check sheet.
+
+    Answers are keyed by sentence_id rather than position so a partial pass merges cleanly.
+    An answer with no matching row means the sheet was resampled under the labeller's feet;
+    that is raised, never dropped, because silently discarding it would leave the human's
+    judgment attached to nothing.
+    """
+    merged = [dict(r) for r in rows]
+    known = {str(r["sentence_id"]) for r in merged}
+    for sentence_id in answers:
+        if str(sentence_id) not in known:
+            raise ValueError(f"answer for unknown sentence_id {sentence_id!r} (sheet resampled?)")
+
+    for row in merged:
+        human = answers.get(str(row["sentence_id"]))
+        if human is None:
+            continue
+        row["human_label"] = _level(human, "human_label")
+        row["agree"] = "yes" if human == row["weak_label"] else "no"
+    return merged
+
+
 def score_spotcheck(rows: Iterable[Mapping[str, str]]) -> SpotcheckResult:
     n_rows = n_missing = n_agree = n_too_hard = n_too_easy = 0
     confusion: dict[tuple[str, str], int] = {}
