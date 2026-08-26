@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* Design tokens mirrored from the Claude Design "Organic" system
+   (_ds/organic-2ba17b7c/styles.css). Ramps are generated in OKLCH on one
+   shared lightness scale, so the same step of any role matches in value. */
+@theme {
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-400: #c0b6a5;
+  --color-neutral-500: #a19786;
+  --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
+  --color-neutral-800: #474238;
+  --color-neutral-900: #2e2b25;
+
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-400: #f6a06b;
+  --color-accent-500: #d67f48;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+  --color-accent-900: #402310;
+
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-200: #e1eecc;
+  --color-accent-2-300: #ccdbb2;
+  --color-accent-2-400: #aebf92;
+  --color-accent-2-500: #8fa073;
+  --color-accent-2-600: #728157;
+  --color-accent-2-700: #56633f;
+  --color-accent-2-800: #3d472b;
+  --color-accent-2-900: #272e1b;
+
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, sans-serif;
+  /* Overridden per pairing below; declared here so `font-jp` exists. */
+  --font-jp: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+}
+
+/* Pairings. The design brief holds the passage, the popup and the tutor rail
+   constant across 1a/1b/1c — only the ground, the accent voice and the
+   Japanese face change. So a pairing is a token swap, not a component fork. */
+:root,
+[data-pairing="kohi"] {
+  --color-ground: var(--color-bg);
+  --color-ground-raised: var(--color-surface);
+  --color-ink: var(--color-text);
+  --color-muted: var(--color-neutral-700);
+  --color-voice: var(--color-accent);
+  --color-voice-contrast: var(--color-bg);
+  --color-raised: var(--color-neutral-100);
+  --color-raised-ink: var(--color-neutral-900);
+  --color-inset: var(--color-neutral-200);
+  --color-inset-deep: var(--color-bg);
+  --font-jp: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+}
+
+[data-pairing="washi"] {
+  --color-ground: var(--color-neutral-100);
+  --color-ground-raised: var(--color-neutral-200);
+  --color-ink: var(--color-neutral-900);
+  --color-muted: var(--color-neutral-600);
+  --color-voice: var(--color-accent-2-600);
+  --color-voice-contrast: var(--color-neutral-100);
+  --color-raised: var(--color-neutral-100);
+  --color-raised-ink: var(--color-neutral-900);
+  --color-inset: var(--color-neutral-200);
+  --color-inset-deep: var(--color-neutral-100);
+  --font-jp: "Shippori Mincho", serif;
+}
+
+[data-pairing="sumi"] {
+  --color-ground: var(--color-accent-2-900);
+  --color-ground-raised: var(--color-neutral-900);
+  --color-ink: var(--color-neutral-200);
+  --color-muted: var(--color-neutral-400);
+  --color-voice: var(--color-accent-400);
+  --color-voice-contrast: var(--color-accent-900);
+  --color-raised: var(--color-neutral-900);
+  --color-raised-ink: var(--color-neutral-200);
+  --color-inset: var(--color-accent-2-900);
+  --color-inset-deep: var(--color-neutral-800);
+  --font-jp: "Noto Sans JP", sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: #e6dcc9;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: inherit;
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-voice);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-voice) 30%, transparent);
+  }
+}
+
+/* Furigana reveal. `hover` is the default: readings stay out of the way until
+   you reach for one, so the eye trains on the kanji first. */
+ruby rt {
+  font-size: 0.42em;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+ruby:hover rt {
+  opacity: 0.72;
+}
+
+/* A phone cannot hover, so the selected word reveals its own reading. Without
+   this, "on hover" reads as "never" on touch. */
+[aria-pressed="true"] rt {
+  opacity: 0.72;
+}
+
+[data-furi="always"] rt {
+  opacity: 0.72;
+}
+
+[data-furi="off"] rt {
+  display: none;
+}
+
+/* The tutor's thinking indicator. Kept in CSS rather than as three staggered
+   utility classes so the timing lives in one place. */
+@keyframes thinking {
+  0%,
+  70%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes sheet-rise {
+  from {
+    transform: translateY(12%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
