@@ -6,7 +6,7 @@ import { TutorPanel } from "@/components/tutor/tutor-panel";
 import { learner, passage } from "@/lib/fixtures";
 
 export default function TutorPage() {
-  const chat = useTutorChat([]);
+  const chat = useTutorChat([], learner);
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-5 px-5 pt-6 pb-24 lg:px-8 lg:py-9">

@@ -30,14 +30,22 @@ word tapped in the reader can be handed to the tutor with its dictionary entry
 as context. What is *not* live is the model behind it.
 
 [`src/lib/tutor.ts`](src/lib/tutor.ts) is the single seam between the tutor UI
-and a real model. `askTutor()` is async, takes a variable amount of time and can
-fail, so everything above it already behaves as though the answer arrives over
-the network. Today it returns canned answers matched against the passage;
-replacing its body with a `POST /tutor` is the whole migration, and no component
-needs to change.
+and the model. `streamTutor()` yields answer blocks as they arrive:
+
+```bash
+# frontend/.env.local
+NEXT_PUBLIC_TUTOR_API=http://localhost:8000
+```
+
+With that set, questions go to the FastAPI backend and the answer streams in
+block by block. Without it the canned answers stand in — **explicitly**: the
+panel says so on screen, because a mock that silently impersonates the real
+thing is how you ship a broken tutor without noticing.
 
 State lives in [`src/hooks/use-tutor-chat.ts`](src/hooks/use-tutor-chat.ts),
-which discards answers that resolve after the learner has moved on.
+which aborts an answer the learner has moved on from and distinguishes
+`waiting` (nothing has arrived yet — show the dots) from `thinking` (the answer
+is still growing).
 
 ## Layout
 

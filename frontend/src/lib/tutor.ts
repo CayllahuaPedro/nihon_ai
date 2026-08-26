@@ -1,12 +1,18 @@
-import type { TutorAsk, TutorBlock, TutorTurn } from "./types";
+import type { TutorAsk, TutorBlock } from "./types";
 
-/* The one seam between the tutor UI and a real model. Everything above this
-   file already behaves like the answer arrives over the network — it awaits,
-   it can fail, it takes a variable amount of time. Replacing the body with a
-   POST to /tutor is the whole migration. */
+/* The one seam between the tutor UI and a real model.
+ *
+ * With NEXT_PUBLIC_TUTOR_API set, questions go to the FastAPI backend and the
+ * answer arrives as server-sent block events. Without it, the canned answers
+ * below stand in — explicitly, not as a silent fallback: `tutorSource` says
+ * which one is live so the UI can tell the learner. */
 
-const LATENCY_FLOOR_MS = 700;
-const LATENCY_SPREAD_MS = 900;
+const API = process.env.NEXT_PUBLIC_TUTOR_API;
+
+export const tutorSource: "backend" | "mock" = API ? "backend" : "mock";
+
+const MOCK_FIRST_BLOCK_MS = 650;
+const MOCK_BLOCK_GAP_MS = 380;
 
 /** Keyed on what a learner actually types while reading this passage. */
 const canned: { match: RegExp; blocks: TutorBlock[] }[] = [
@@ -70,14 +76,21 @@ const canned: { match: RegExp; blocks: TutorBlock[] }[] = [
     match: /日本語|japanese only|in japanese/i,
     blocks: [
       { kind: "prose", text: "いいですね。ここからは日本語で説明します。" },
-      { kind: "example", japanese: "「消えていく」は、だんだん見えなくなること", gloss: "gradually stops being visible" },
+      {
+        kind: "example",
+        japanese: "「消えていく」は、だんだん見えなくなること",
+        gloss: "gradually stops being visible",
+      },
       { kind: "prose", text: "わからない言葉があったら、その言葉だけ聞いてください。" },
     ],
   },
   {
     match: /example|more|another/i,
     blocks: [
-      { kind: "prose", text: "Same shape, different verbs — the pattern is easier to feel across three than to memorise from one." },
+      {
+        kind: "prose",
+        text: "Same shape, different verbs — the pattern is easier to feel across three than to memorise from one.",
+      },
       { kind: "example", japanese: "音が小さくなっていく", gloss: "the sound keeps getting quieter" },
       { kind: "example", japanese: "人が増えていった", gloss: "people kept increasing" },
       { kind: "example", japanese: "空が明るくなっていく", gloss: "the sky keeps brightening" },
@@ -85,7 +98,10 @@ const canned: { match: RegExp; blocks: TutorBlock[] }[] = [
   },
 ];
 
-function fallback(ask: TutorAsk): TutorBlock[] {
+function cannedFor(ask: TutorAsk): TutorBlock[] {
+  const hit = canned.find((entry) => entry.match.test(ask.question));
+  if (hit) return hit.blocks;
+
   if (ask.focusWord) {
     return [
       {
@@ -102,21 +118,106 @@ function fallback(ask: TutorAsk): TutorBlock[] {
   ];
 }
 
-let sequence = 0;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export function turnId(role: TutorTurn["role"]): string {
-  sequence += 1;
-  return `${role}-${sequence}`;
+async function* streamCanned(ask: TutorAsk): AsyncGenerator<TutorBlock> {
+  for (const [index, block] of cannedFor(ask).entries()) {
+    await wait(index === 0 ? MOCK_FIRST_BLOCK_MS : MOCK_BLOCK_GAP_MS);
+    yield block;
+  }
 }
 
-export async function askTutor(ask: TutorAsk): Promise<TutorTurn> {
-  const delay = LATENCY_FLOOR_MS + Math.random() * LATENCY_SPREAD_MS;
-  await new Promise((resolve) => setTimeout(resolve, delay));
+/** Splits an SSE byte stream into `[event, data]` frames. */
+async function* frames(
+  body: ReadableStream<Uint8Array>,
+  signal?: AbortSignal,
+): AsyncGenerator<[string, string]> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-  const hit = canned.find((entry) => entry.match.test(ask.question));
-  return {
-    id: turnId("tutor"),
-    role: "tutor",
-    blocks: hit ? hit.blocks : fallback(ask),
-  };
+  try {
+    while (!signal?.aborted) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // A frame ends at a blank line; anything after the last one is partial.
+      const complete = buffer.split("\n\n");
+      buffer = complete.pop() ?? "";
+
+      for (const frame of complete) {
+        let name = "";
+        let data = "";
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event: ")) name = line.slice(7);
+          else if (line.startsWith("data: ")) data = line.slice(6);
+        }
+        if (name) yield [name, data];
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {
+      // The consumer stopped listening; a failed cancel changes nothing.
+    });
+  }
+}
+
+async function* streamFromBackend(
+  ask: TutorAsk,
+  signal?: AbortSignal,
+): AsyncGenerator<TutorBlock> {
+  let response: Response;
+  try {
+    response = await fetch(`${API}/tutor`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        question: ask.question,
+        focus_word: ask.focusWord ?? null,
+        level: ask.level,
+        known_words: ask.knownWords,
+      }),
+    });
+  } catch (cause) {
+    // An aborted request is the app's own doing and must stay distinguishable
+    // from a tutor that genuinely cannot be reached.
+    if (signal?.aborted) throw cause;
+    throw new Error("Can't reach the tutor. Check that the API is running.");
+  }
+
+  if (!response.ok || !response.body) {
+    const detail = await response
+      .json()
+      .then((payload: { detail?: string }) => payload.detail)
+      .catch(() => null);
+    throw new Error(detail ?? `The tutor is unreachable (${response.status}).`);
+  }
+
+  for await (const [event, data] of frames(response.body, signal)) {
+    if (event === "done") return;
+    if (event === "error") {
+      throw new Error(
+        (JSON.parse(data) as { message?: string }).message ??
+          "The tutor stopped answering.",
+      );
+    }
+    if (event === "block") yield JSON.parse(data) as TutorBlock;
+  }
+}
+
+export function streamTutor(
+  ask: TutorAsk,
+  signal?: AbortSignal,
+): AsyncGenerator<TutorBlock> {
+  return API ? streamFromBackend(ask, signal) : streamCanned(ask);
+}
+
+let sequence = 0;
+
+export function turnId(role: "learner" | "tutor"): string {
+  sequence += 1;
+  return `${role}-${sequence}`;
 }

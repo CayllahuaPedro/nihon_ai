@@ -11,7 +11,7 @@ import { TutorRail } from "@/components/reader/tutor-rail";
 import { TutorPanel } from "@/components/tutor/tutor-panel";
 import { Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
-import { dictionary, passage, tutorThread } from "@/lib/fixtures";
+import { dictionary, learner, passage, tutorThread } from "@/lib/fixtures";
 import type {
   DictionaryEntry,
   FuriganaMode,
@@ -60,7 +60,7 @@ export default function ReaderPage() {
 
   const entry = pick?.token.entryId ? dictionary[pick.token.entryId] : null;
   const focusWord = entry?.lemma ?? tutorFocus ?? undefined;
-  const chat = useTutorChat(tutorThread, focusWord);
+  const chat = useTutorChat(tutorThread, learner, focusWord);
 
   // Measure before paint so the popup never flashes at the wrong offset.
   useLayoutEffect(() => {

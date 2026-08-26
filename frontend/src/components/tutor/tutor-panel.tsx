@@ -2,6 +2,7 @@
 
 import type { TutorChat } from "@/hooks/use-tutor-chat";
 import { tutorSuggestions } from "@/lib/fixtures";
+import { tutorSource } from "@/lib/tutor";
 import { TutorComposer } from "./tutor-composer";
 import { TutorThread } from "./tutor-thread";
 
@@ -25,6 +26,7 @@ export function TutorPanel({ chat, focusWord, className = "" }: TutorPanelProps)
       <TutorThread
         turns={chat.turns}
         thinking={chat.thinking}
+        waiting={chat.waiting}
         error={chat.error}
         onRetry={chat.retry}
         emptyHint="Ask about anything on this page — a grammar shape, a word you tapped, or a quick drill."
@@ -36,6 +38,12 @@ export function TutorPanel({ chat, focusWord, className = "" }: TutorPanelProps)
         suggestions={chat.thinking ? [] : tutorSuggestions}
         placeholder="Ask about this sentence…"
       />
+
+      {tutorSource === "mock" ? (
+        <p className="flex-none text-center text-[11px] text-[var(--color-muted)]">
+          Canned answers — set NEXT_PUBLIC_TUTOR_API to reach the real tutor.
+        </p>
+      ) : null}
     </div>
   );
 }

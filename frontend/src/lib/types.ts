@@ -66,11 +66,13 @@ export type TutorTurn =
   | { id: string; role: "learner"; text: string }
   | { id: string; role: "tutor"; blocks: TutorBlock[] };
 
-/** What the composer sends up and the mock answers against. */
+/** What the composer sends up and the tutor answers against. */
 export type TutorAsk = {
   question: string;
   /** Word the reader has open, when the question came from the rail. */
   focusWord?: string;
+  level: string;
+  knownWords: number;
 };
 
 export type ContentKind = "video" | "article" | "book";

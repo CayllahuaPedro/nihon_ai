@@ -8,6 +8,7 @@ import { TutorTurn } from "./tutor-turn";
 type TutorThreadProps = {
   turns: Turn[];
   thinking: boolean;
+  waiting: boolean;
   error: string | null;
   onRetry: () => void;
   emptyHint: string;
@@ -16,6 +17,7 @@ type TutorThreadProps = {
 export function TutorThread({
   turns,
   thinking,
+  waiting,
   error,
   onRetry,
   emptyHint,
@@ -30,7 +32,7 @@ export function TutorThread({
       behavior: reduced ? "auto" : "smooth",
       block: "end",
     });
-  }, [turns, thinking]);
+  }, [turns, waiting]);
 
   return (
     <div
@@ -49,7 +51,7 @@ export function TutorThread({
         <TutorTurn key={turn.id} turn={turn} />
       ))}
 
-      {thinking ? <ThinkingDots /> : null}
+      {waiting ? <ThinkingDots /> : null}
 
       {error ? (
         <p className="flex flex-wrap items-center gap-2.5 self-start rounded-md bg-accent-200 px-4 py-3 text-sm text-accent-900">

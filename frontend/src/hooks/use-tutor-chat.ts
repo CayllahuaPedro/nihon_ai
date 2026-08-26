@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { askTutor, turnId } from "@/lib/tutor";
-import type { TutorTurn } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { streamTutor, turnId } from "@/lib/tutor";
+import type { TutorBlock, TutorTurn } from "@/lib/types";
 
 export type TutorChat = {
   turns: TutorTurn[];
-  /** True while an answer is in flight, so the thread can show it thinking. */
+  /** True from the moment a question is sent until its answer completes. */
   thinking: boolean;
+  /** True only before the first block of the current answer arrives. */
+  waiting: boolean;
   error: string | null;
   /** `focus` overrides the ambient focus word for this one question, so a word
    *  handed over from the dictionary keeps its context even as that closes. */
@@ -16,42 +18,84 @@ export type TutorChat = {
   clear: () => void;
 };
 
+type Learner = { level: string; knownWords: number };
+
 export function useTutorChat(
   seed: TutorTurn[],
+  learner: Learner,
   focusWord?: string,
 ): TutorChat {
   const [turns, setTurns] = useState<TutorTurn[]>(seed);
   const [thinking, setThinking] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only the newest question may resolve into the thread. An answer that
-  // arrives after the learner has moved on would otherwise land out of order.
-  const latestAsk = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
   const lastQuestion = useRef<string | null>(null);
   const lastFocus = useRef<string | undefined>(undefined);
 
+  useEffect(() => () => inFlight.current?.abort(), []);
+
   const ask = useCallback(
     async (question: string, focus?: string) => {
-      const ticket = latestAsk.current + 1;
-      latestAsk.current = ticket;
+      // Only the newest question may write into the thread; an answer the
+      // learner has moved on from is cancelled rather than left to land.
+      inFlight.current?.abort();
+      const controller = new AbortController();
+      inFlight.current = controller;
+
       lastQuestion.current = question;
       lastFocus.current = focus ?? focusWord;
 
       setError(null);
       setThinking(true);
+      setWaiting(true);
+
+      const id = turnId("tutor");
+
+      // The updater decides from the state it is handed, never from a variable
+      // captured out here: React runs it later, by which time such a variable
+      // has already moved on and every block lands in the wrong branch.
+      const append = (block: TutorBlock) => {
+        setTurns((current) => {
+          const last = current.at(-1);
+          if (last?.id === id && last.role === "tutor") {
+            return [
+              ...current.slice(0, -1),
+              { ...last, blocks: [...last.blocks, block] },
+            ];
+          }
+          return [...current, { id, role: "tutor", blocks: [block] }];
+        });
+      };
 
       try {
-        const answer = await askTutor({ question, focusWord: lastFocus.current });
-        if (latestAsk.current !== ticket) return;
-        setTurns((current) => [...current, answer]);
-      } catch {
-        if (latestAsk.current !== ticket) return;
-        setError("The tutor didn't answer. Ask again.");
+        for await (const block of streamTutor(
+          {
+            question,
+            focusWord: lastFocus.current,
+            level: learner.level,
+            knownWords: learner.knownWords,
+          },
+          controller.signal,
+        )) {
+          if (controller.signal.aborted) return;
+          setWaiting(false);
+          append(block);
+        }
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        setError(
+          cause instanceof Error ? cause.message : "The tutor didn't answer.",
+        );
       } finally {
-        if (latestAsk.current === ticket) setThinking(false);
+        if (!controller.signal.aborted) {
+          setThinking(false);
+          setWaiting(false);
+        }
       }
     },
-    [focusWord],
+    [focusWord, learner.level, learner.knownWords],
   );
 
   const send = useCallback(
@@ -75,13 +119,14 @@ export function useTutorChat(
   }, [ask, thinking]);
 
   const clear = useCallback(() => {
-    latestAsk.current += 1;
+    inFlight.current?.abort();
     lastQuestion.current = null;
     lastFocus.current = undefined;
     setTurns([]);
     setThinking(false);
+    setWaiting(false);
     setError(null);
   }, []);
 
-  return { turns, thinking, error, send, retry, clear };
+  return { turns, thinking, waiting, error, send, retry, clear };
 }
