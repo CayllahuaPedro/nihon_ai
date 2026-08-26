@@ -16,10 +16,15 @@ venv/
 .ruff_cache/
 *.egg-info/
 
-# ML artifacts & data
-data/
-models/
-checkpoints/
+# ML artifacts & data.
+# `models/` and `data/` are unanchored, so they also matched source packages
+# like backend/app/models/. Anchor them to where artifacts actually live.
+/data/
+ml/data/
+/models/
+ml/models/
+/checkpoints/
+ml/checkpoints/
 *.ckpt
 *.safetensors
 wandb/
