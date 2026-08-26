@@ -41,3 +41,7 @@ out/
 .DS_Store
 .idea/
 .vscode/
+
+# Local tool indexes
+.codegraph/
+.atl/
