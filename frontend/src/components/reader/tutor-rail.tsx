@@ -15,7 +15,7 @@ export function TutorRail({
   return (
     <aside
       aria-label="Tutor"
-      className="hidden min-h-0 min-w-0 flex-col gap-[18px] bg-[var(--color-ground-raised)] px-[26px] py-7 lg:flex"
+      className="hidden min-w-0 bg-[var(--color-ground-raised)] px-[26px] py-7 lg:sticky lg:top-[var(--header-h)] lg:flex lg:h-[calc(100svh-var(--header-h))] lg:min-h-0 lg:flex-col lg:gap-[18px]"
     >
       <h2 className="flex flex-none items-center gap-2.5 font-heading text-[19px]">
         <span aria-hidden className="h-[30px] w-[30px] rounded-full bg-accent-2-500" />

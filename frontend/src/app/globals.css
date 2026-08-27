@@ -101,6 +101,21 @@
 }
 
 @layer base {
+  /* Chrome that surrounds a page, as heights the content can subtract. A panel
+     that scrolls internally needs a bounded height, and hard-coding the header
+     in three files is how they drift apart. */
+  :root {
+    --header-h: 60px;
+    --tabbar-h: 56px;
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --header-h: 68px;
+      --tabbar-h: 0px;
+    }
+  }
+
   * {
     box-sizing: border-box;
   }

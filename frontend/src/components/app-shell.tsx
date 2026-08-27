@@ -54,7 +54,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+      {/* Grows with its content, so a long passage scrolls the page. Panels
+          that scroll internally bound their own height rather than relying on
+          a clamp here. */}
+      <main className="flex flex-1 flex-col">{children}</main>
 
       {/* Phones get the sections as a thumb-reachable bar instead of a header
           row that would have to shrink past the point of being tappable. */}

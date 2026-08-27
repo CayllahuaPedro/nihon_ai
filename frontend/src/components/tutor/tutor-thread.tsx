@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { TutorTurn as Turn } from "@/lib/types";
 import { ThinkingDots } from "./thinking-dots";
 import { TutorTurn } from "./tutor-turn";
+
+/** How close to the bottom still counts as following along. */
+const FOLLOW_THRESHOLD_PX = 48;
 
 type TutorThreadProps = {
   turns: Turn[];
@@ -22,20 +25,37 @@ export function TutorThread({
   onRetry,
   emptyHint,
 }: TutorThreadProps) {
-  const foot = useRef<HTMLDivElement>(null);
+  const pane = useRef<HTMLDivElement>(null);
+  // Whether the reader is following the newest text. Scrolling up to re-read
+  // an earlier answer is a decision, and the thread must not drag them back.
+  const following = useRef(true);
 
-  // Follow the newest turn. `smooth` is dropped for reduced motion, where a
-  // long animated jump is exactly what the setting asks us not to do.
+  const onScroll = useCallback(() => {
+    const el = pane.current;
+    if (!el) return;
+    following.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX;
+  }, []);
+
+  // Jump rather than animate. An answer arrives in many small steps, and a
+  // smooth scroll restarted on each one never finishes — which also makes this
+  // the behaviour reduced-motion asks for.
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    foot.current?.scrollIntoView({
-      behavior: reduced ? "auto" : "smooth",
-      block: "end",
-    });
-  }, [turns, waiting]);
+    const el = pane.current;
+    if (!el) return;
+
+    // Asking a question is an act of intent: the reader wants to see it and
+    // the answer to it, even if they had scrolled up to re-read something.
+    if (turns.at(-1)?.role === "learner") following.current = true;
+
+    if (!following.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [turns, waiting, error]);
 
   return (
     <div
+      ref={pane}
+      onScroll={onScroll}
       role="log"
       aria-live="polite"
       aria-label="Tutor conversation"
@@ -65,8 +85,6 @@ export function TutorThread({
           </button>
         </p>
       ) : null}
-
-      <div ref={foot} />
     </div>
   );
 }

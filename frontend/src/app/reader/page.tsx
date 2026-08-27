@@ -114,7 +114,7 @@ export default function ReaderPage() {
     : null;
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_356px]">
+    <div className="grid flex-1 grid-cols-1 lg:grid-cols-[1fr_356px] lg:items-start">
       <div
         ref={paneRef}
         data-furi={furigana}
