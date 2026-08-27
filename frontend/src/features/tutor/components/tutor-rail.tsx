@@ -1,7 +1,7 @@
 "use client";
 
-import type { TutorChat } from "@/hooks/use-tutor-chat";
-import { TutorPanel } from "@/components/tutor/tutor-panel";
+import type { TutorChat } from "../hooks/use-tutor-chat";
+import { TutorPanel } from "./tutor-panel";
 
 /** The desktop home for the tutor. On phones the same panel arrives in a
  *  sheet instead — see the reader page. */

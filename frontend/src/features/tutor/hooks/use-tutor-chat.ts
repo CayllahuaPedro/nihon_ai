@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamTutor, turnId } from "@/lib/tutor";
-import { settled } from "@/lib/types";
-import type { StreamingBlock, TutorEvent, TutorTurn } from "@/lib/types";
+import { streamTutor, turnId } from "../model/stream";
+import { applyEvent } from "../model/apply-event";
+import type { TutorEvent, TutorTurn } from "../types";
 
 export type TutorChat = {
   turns: TutorTurn[];
@@ -20,38 +20,6 @@ export type TutorChat = {
 };
 
 type Learner = { level: string; knownWords: number };
-
-/** Blocks are matched on the backend's index, never on array position — a
- *  dropped block would otherwise shift every later block onto the wrong slot. */
-function applyEvent(
-  blocks: StreamingBlock[],
-  event: TutorEvent,
-): StreamingBlock[] {
-  switch (event.type) {
-    case "start":
-      return [
-        ...blocks,
-        {
-          index: event.index,
-          kind: event.kind,
-          done: false,
-          ...(event.kind === "prose" ? { text: "" } : {}),
-        },
-      ];
-    case "delta":
-      return blocks.map((block) =>
-        block.index === event.index
-          ? { ...block, text: (block.text ?? "") + event.text }
-          : block,
-      );
-    case "end":
-      return blocks.map((block) =>
-        block.index === event.index ? settled(event.block, event.index) : block,
-      );
-    case "drop":
-      return blocks.filter((block) => block.index !== event.index);
-  }
-}
 
 export function useTutorChat(
   seed: TutorTurn[],

@@ -1,13 +1,7 @@
 import { parseTokens } from "./tokenize";
-import { settled } from "./types";
-import type {
-  DictionaryEntry,
-  LearnerSummary,
-  LockedRecommendation,
-  Passage,
-  Recommendation,
-  TutorTurn,
-} from "./types";
+import { settled } from "@/features/tutor";
+import type { DictionaryEntry, LearnerSummary, LockedRecommendation, Passage, Recommendation } from "./types";
+import type { TutorTurn } from "@/features/tutor";
 
 /* Stand-in data shaped like the responses the FastAPI backend will serve:
    /progress for the learner summary, /classify for word states, /mining for

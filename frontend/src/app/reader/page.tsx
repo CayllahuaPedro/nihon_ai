@@ -2,13 +2,11 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useTutorChat } from "@/hooks/use-tutor-chat";
 import { useReaderSettings } from "@/components/reader-settings-provider";
 import { DisplaySettings } from "@/components/reader/display-settings";
 import { PassageText, type TokenPick } from "@/components/reader/passage-text";
 import { POPUP_WIDTH, WordEntry, WordPopup } from "@/components/reader/word-popup";
-import { TutorRail } from "@/components/reader/tutor-rail";
-import { TutorPanel } from "@/components/tutor/tutor-panel";
+import { TutorPanel, TutorRail, useTutorChat } from "@/features/tutor";
 import { Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
 import { dictionary, learner, passage, tutorThread } from "@/lib/fixtures";

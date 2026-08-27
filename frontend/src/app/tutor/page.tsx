@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTutorChat } from "@/hooks/use-tutor-chat";
-import { TutorPanel } from "@/components/tutor/tutor-panel";
+import { TutorPanel, useTutorChat } from "@/features/tutor";
 import { learner, passage } from "@/lib/fixtures";
 
 export default function TutorPage() {

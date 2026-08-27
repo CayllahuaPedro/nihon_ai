@@ -9,7 +9,33 @@ npm run dev        # http://localhost:3000
 npm run dev:lan    # also reachable from a phone on the same network
 npm run build
 npm run typecheck
+npm test           # vitest, tests live beside the code
 ```
+
+## Structure
+
+Code is organised by feature, in three layers, so logic can be proved without
+mounting React:
+
+```
+src/features/tutor/
+├── model/       pure functions — no React, no network
+├── hooks/       React state and orchestration
+├── components/  presentation
+├── types.ts
+└── index.ts     the only entry point; nothing reaches past it
+```
+
+`model/` is the layer that matters. `apply-event.ts` decides what a reader sees
+mid-answer and `sse.ts` splits a byte stream that can cut anywhere — both are
+plain functions with their own tests, because a bug in either is invisible from
+the outside. The hook orchestrates them; the components only render.
+
+Shared pieces stay put: `components/ui/` for primitives used by more than one
+feature, `lib/` for fixtures and app-wide types, `hooks/` for generic hooks.
+
+**Only `tutor` has been migrated.** `components/reader/` and
+`components/discover/` still follow the old by-type layout.
 
 ## Routes
 

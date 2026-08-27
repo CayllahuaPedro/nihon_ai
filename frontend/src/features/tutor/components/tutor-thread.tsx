@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { TutorTurn as Turn } from "@/lib/types";
+import type { TutorTurn as Turn } from "../types";
 import { ThinkingDots } from "./thinking-dots";
 import { TutorTurn } from "./tutor-turn";
 

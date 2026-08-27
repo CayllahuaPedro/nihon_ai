@@ -1,4 +1,4 @@
-import type { StreamingBlock, TutorTurn as Turn } from "@/lib/types";
+import type { StreamingBlock, TutorTurn as Turn } from "../types";
 
 /** A tutor answer is prose plus quoted Japanese, never one undifferentiated
  *  paragraph. The quoted lines carry a rule in the accent so the eye can find
