@@ -11,9 +11,9 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
+from app.core.config import settings
 from app.models.tutor import BLOCK_FIELDS, TutorAsk
 
-MODEL = "claude-opus-5"
 MAX_TOKENS = 64_000
 
 _FORMAT_RULES = """\
@@ -87,7 +87,8 @@ async def stream_tutor_blocks(client: Any, ask: TutorAsk) -> AsyncIterator[dict[
     emitted = 0
 
     async with client.messages.stream(
-        model=MODEL,
+        # Read per call, not captured at import, so the setting is a real knob.
+        model=settings.tutor_model,
         max_tokens=MAX_TOKENS,
         system=build_system_prompt(ask),
         messages=[{"role": "user", "content": ask.question}],

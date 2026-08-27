@@ -128,6 +128,36 @@ async def test_asks_the_model_with_the_learners_question():
     assert ASK.question in messages[0]["content"]
 
 
+@pytest.mark.asyncio
+async def test_uses_the_configured_model():
+    from app.core import config
+
+    client = FakeAnthropic(['{"kind":"prose","text":"x"}\n'])
+
+    await collect(client)
+
+    assert client.messages.captured["model"] == config.settings.tutor_model
+
+
+@pytest.mark.asyncio
+async def test_the_configured_model_can_be_changed(monkeypatch):
+    """Swapping tiers for cost is a setting, not an edit."""
+    from app.core import config
+
+    monkeypatch.setattr(config.settings, "tutor_model", "claude-haiku-4-5")
+    client = FakeAnthropic(['{"kind":"prose","text":"x"}\n'])
+
+    await collect(client)
+
+    assert client.messages.captured["model"] == "claude-haiku-4-5"
+
+
+def test_defaults_to_sonnet():
+    from app.core.config import Settings
+
+    assert Settings().tutor_model == "claude-sonnet-5"
+
+
 def test_system_prompt_states_the_learner_level():
     prompt = build_system_prompt(ASK)
 

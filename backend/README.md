@@ -56,6 +56,13 @@ and known-word count, and the system prompt pins the answer to grammar at or
 below that level. That is what separates this from forwarding the question to a
 general chat model.
 
+### Model
+
+`TUTOR_MODEL` picks the model, defaulting to `claude-sonnet-5` — short answers
+pinned to one JLPT level don't need the Opus tier, and Sonnet is roughly 2.5x
+cheaper per token. It is read per request rather than captured at import, so
+changing it is a setting, not an edit.
+
 ### Failure modes
 
 | Situation | Response |
