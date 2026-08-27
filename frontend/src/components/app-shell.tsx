@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { learner } from "@/lib/fixtures";
-import { useReaderSettings } from "./reader-settings-provider";
+import { useReaderSettings } from "@/features/reader";
 
 /** SRS is drawn in the design but has no route yet, so it renders as
  *  present-but-inert rather than as a link that goes nowhere. */

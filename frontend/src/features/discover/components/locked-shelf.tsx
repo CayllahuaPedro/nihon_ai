@@ -1,7 +1,9 @@
-import { learner, locked } from "@/lib/fixtures";
+import { learner } from "@/lib/fixtures";
+import { locked } from "../fixtures";
+import { shelfProgress } from "../model/shelves";
 
 export function LockedShelf() {
-  const progress = Math.round((learner.knownWords / learner.nextShelfAt) * 100);
+  const progress = shelfProgress(learner.knownWords, learner.nextShelfAt);
 
   return (
     <section className="flex flex-wrap items-center gap-x-[22px] gap-y-4 rounded-lg bg-accent-2-100 px-5 py-[18px] text-accent-2-900 sm:px-[22px]">

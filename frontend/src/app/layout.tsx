@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/app-shell";
-import { ReaderSettingsProvider } from "@/components/reader-settings-provider";
+import { ReaderSettingsProvider } from "@/features/reader";
 import "./globals.css";
 
 export const metadata: Metadata = {

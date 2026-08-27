@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useReaderSettings } from "@/components/reader-settings-provider";
+import { useReaderSettings } from "../hooks/use-reader-settings";
 import { Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
-import type { FuriganaMode, Pairing } from "@/lib/types";
+import type { FuriganaMode, Pairing } from "../types";
 
 const furiganaOptions: { value: FuriganaMode; label: string }[] = [
   { value: "hover", label: "On tap" },

@@ -1,6 +1,6 @@
-import type { Recommendation } from "@/lib/types";
+import type { Recommendation } from "../types";
 import { ComprehensionDial } from "./comprehension-dial";
-import { ImageSlot } from "../ui/image-slot";
+import { ImageSlot } from "@/components/ui/image-slot";
 
 type ShelfProps = {
   title: string;

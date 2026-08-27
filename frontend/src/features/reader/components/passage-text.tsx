@@ -1,6 +1,6 @@
 "use client";
 
-import type { Paragraph, ReaderMode, Token, WordState } from "@/lib/types";
+import type { Paragraph, ReaderMode, Token, WordState } from "../types";
 
 const stateClass: Record<WordState, string> = {
   known: "shadow-[0_2px_0_var(--color-accent-2-400)]",

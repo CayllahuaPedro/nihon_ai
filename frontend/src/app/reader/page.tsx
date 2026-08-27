@@ -2,23 +2,32 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useReaderSettings } from "@/components/reader-settings-provider";
-import { DisplaySettings } from "@/components/reader/display-settings";
-import { PassageText, type TokenPick } from "@/components/reader/passage-text";
-import { POPUP_WIDTH, WordEntry, WordPopup } from "@/components/reader/word-popup";
-import { TutorPanel, TutorRail, useTutorChat } from "@/features/tutor";
+import {
+  DisplaySettings,
+  PassageText,
+  popupPosition,
+  type TokenPick,
+  dictionary,
+  passage,
+  useReaderSettings,
+  WordEntry,
+  WordPopup,
+} from "@/features/reader";
+import {
+  TutorPanel,
+  TutorRail,
+  tutorThread,
+  useTutorChat,
+} from "@/features/tutor";
 import { Segmented } from "@/components/ui/segmented";
 import { Sheet } from "@/components/ui/sheet";
-import { dictionary, learner, passage, tutorThread } from "@/lib/fixtures";
+import { learner } from "@/lib/fixtures";
 import type {
   DictionaryEntry,
   FuriganaMode,
   Pairing,
   ReaderMode,
-} from "@/lib/types";
-
-const POPUP_GAP = 14;
-const POPUP_MARGIN = 16;
+} from "@/features/reader";
 
 /** Matches the `lg:` breakpoint the layout switches on. */
 const DESKTOP = "(min-width: 1024px)";
@@ -65,15 +74,7 @@ export default function ReaderPage() {
     const pane = paneRef.current;
     if (!pick || !pane) return;
 
-    const paneRect = pane.getBoundingClientRect();
-    const maxLeft = paneRect.width - POPUP_WIDTH - POPUP_MARGIN;
-    const left =
-      pick.rect.left - paneRect.left + pick.rect.width / 2 - POPUP_WIDTH / 2;
-
-    setPosition({
-      left: Math.max(POPUP_MARGIN, Math.min(left, maxLeft)),
-      top: pick.rect.bottom - paneRect.top + POPUP_GAP,
-    });
+    setPosition(popupPosition(pick.rect, pane.getBoundingClientRect()));
   }, [pick]);
 
   const paragraphs =

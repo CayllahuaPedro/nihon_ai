@@ -1,4 +1,4 @@
-import type { Segment, Token, WordState } from "./types";
+import type { Segment, Token, WordState } from "../types";
 
 /**
  * Parses the compact passage notation used by the fixtures.

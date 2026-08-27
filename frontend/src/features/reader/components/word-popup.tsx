@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { DictionaryEntry } from "@/lib/types";
+import { POPUP_WIDTH } from "../model/popup-position";
+import type { DictionaryEntry } from "../types";
 
 type WordEntryProps = {
   entry: DictionaryEntry;
@@ -9,8 +10,6 @@ type WordEntryProps = {
   onAskTutor: (entry: DictionaryEntry) => void;
   added: boolean;
 };
-
-export const POPUP_WIDTH = 372;
 
 /** The dictionary card itself. It is placed by a popup beside the word on a
  *  desktop and by a sheet on a phone, but reads the same in both. */

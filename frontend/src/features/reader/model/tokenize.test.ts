@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTokens } from "./tokenize";
+import { parseTokens } from "../model/tokenize";
 
 /** The passage notation is the one place fixture text becomes renderable
  *  structure, so its edges are worth pinning down before anything moves. */

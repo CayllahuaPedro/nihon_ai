@@ -1,7 +1,7 @@
 "use client";
 
 import type { TutorChat } from "../hooks/use-tutor-chat";
-import { tutorSuggestions } from "@/lib/fixtures";
+import { tutorSuggestions } from "../fixtures";
 import { tutorSource } from "../model/stream";
 import { TutorComposer } from "./tutor-composer";
 import { TutorThread } from "./tutor-thread";

@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { LockedShelf } from "@/components/discover/locked-shelf";
-import { Shelf } from "@/components/discover/shelf";
 import { Segmented } from "@/components/ui/segmented";
-import { comfortable, learner, stretch } from "@/lib/fixtures";
-import type { ContentKind } from "@/lib/types";
+import {
+  type ContentKind,
+  type KindFilter,
+  LockedShelf,
+  comfortable,
+  matchesFilter,
+  stretch,
+  Shelf,
+} from "@/features/discover";
+import { learner } from "@/lib/fixtures";
 
-type Filter = ContentKind | "all";
-
-const filters: { value: Filter; label: string }[] = [
+const filters: { value: KindFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "video", label: "Video" },
   { value: "article", label: "Article" },
@@ -17,8 +21,8 @@ const filters: { value: Filter; label: string }[] = [
 ];
 
 export default function DiscoverPage() {
-  const [filter, setFilter] = useState<Filter>("all");
-  const keep = (kind: ContentKind) => filter === "all" || filter === kind;
+  const [filter, setFilter] = useState<KindFilter>("all");
+  const keep = (kind: ContentKind) => matchesFilter(kind, filter);
 
   return (
     <div className="flex flex-col gap-[22px] px-5 pt-6 pb-28 sm:px-8 lg:px-11 lg:pt-8 lg:pb-9">

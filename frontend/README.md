@@ -18,36 +18,42 @@ Code is organised by feature, in three layers, so logic can be proved without
 mounting React:
 
 ```
-src/features/tutor/
-├── model/       pure functions — no React, no network
+src/features/<feature>/
+├── model/       pure functions — no React, no DOM, no network
 ├── hooks/       React state and orchestration
 ├── components/  presentation
+├── fixtures.ts  stand-in data this feature owns
 ├── types.ts
 └── index.ts     the only entry point; nothing reaches past it
 ```
 
-`model/` is the layer that matters. `apply-event.ts` decides what a reader sees
-mid-answer and `sse.ts` splits a byte stream that can cut anywhere — both are
-plain functions with their own tests, because a bug in either is invisible from
-the outside. The hook orchestrates them; the components only render.
+`model/` is the layer that earns the layout: `apply-event.ts` decides what a
+reader sees mid-answer, `sse.ts` splits a byte stream that can cut anywhere,
+`popup-position.ts` keeps the dictionary inside the pane, `settings-storage.ts`
+rejects a stored value someone edited by hand. Each is a plain function with
+its own tests, because a bug in any of them is invisible from the outside.
 
-Shared pieces stay put: `components/ui/` for primitives used by more than one
-feature, `lib/` for fixtures and app-wide types, `hooks/` for generic hooks.
+Shared code — `lib/`, `components/ui/`, `hooks/` — knows nothing about
+features. That direction is one-way on purpose: shared code that reaches into a
+feature cannot then be imported by it without a cycle.
 
-**Only `tutor` has been migrated.** `components/reader/` and
-`components/discover/` still follow the old by-type layout.
+### Enforced, not documented
 
-## Routes
+```bash
+npm run lint:arch   # dependency-cruiser
+npm run check       # typecheck + lint:arch + tests
+```
 
-| Route       | Design artboard | State                                   |
-| ----------- | --------------- | --------------------------------------- |
-| `/reader`   | `1a Reader`     | Built — passage, word popup, tutor rail |
-| `/discover` | `2a Discover`   | Built — shelves ranked by comprehension |
-| `/tutor`    | —               | Built — full-page tutor conversation    |
+[`.dependency-cruiser.cjs`](.dependency-cruiser.cjs) fails the build on: cycles,
+shared code importing a feature, a feature reaching past another's barrel, a
+route reaching past a barrel, `model/` importing React or a component, and a
+hook importing a component.
 
-`/` redirects to `/reader`. The nav also shows **SRS**, which is drawn in the
-design but has no route or backend endpoint yet, so it renders as inert rather
-than as a link that goes nowhere.
+Every rule was written after a real violation, and each was then verified by
+committing that violation on purpose and watching the rule catch it — a rule
+you have never seen fail is worth as much as a test you have never seen fail.
+The cycle between the tutor panel and the shared fixtures was found this way,
+not by review.
 
 ## The tutor
 

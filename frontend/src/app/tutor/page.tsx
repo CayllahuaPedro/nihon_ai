@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { TutorPanel, useTutorChat } from "@/features/tutor";
-import { learner, passage } from "@/lib/fixtures";
+import { passage } from "@/features/reader";
+import { learner } from "@/lib/fixtures";
 
 export default function TutorPage() {
   const chat = useTutorChat([], learner);
