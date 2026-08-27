@@ -1,8 +1,10 @@
 # Nihon AI — Copyright (C) 2026 Pedro Villanueva. Licensed under AGPL-3.0.
-"""Server-sent stream of tutor answer blocks.
+"""Server-sent stream of tutor answer events.
 
-Blocks are pushed as they are parsed rather than collected and returned whole,
-so an explanation appears while its examples are still being written.
+A block announces itself (`start`), streams its prose as it is written
+(`delta`), and closes with the validated block (`end`) — or is withdrawn
+(`drop`) if the model's line never passed the schema. Deltas are text to show,
+never text to trust; the `end` is the authority.
 """
 
 import json
@@ -16,7 +18,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.config import settings
 from app.models.tutor import TutorAsk
-from app.services.tutor import stream_tutor_blocks
+from app.services.tutor import stream_tutor_events
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +40,8 @@ def _frame(event: str, data: dict) -> str:
 
 async def _events(client: AsyncAnthropic, ask: TutorAsk) -> AsyncIterator[str]:
     try:
-        async for block in stream_tutor_blocks(client, ask):
-            yield _frame("block", block)
+        async for event in stream_tutor_events(client, ask):
+            yield _frame(event.type, event.model_dump())
     except Exception:
         # The status line went out with the first byte, so a failure here can
         # only be reported inside the stream. The cause is logged rather than

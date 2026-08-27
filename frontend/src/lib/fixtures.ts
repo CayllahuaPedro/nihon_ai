@@ -1,4 +1,5 @@
 import { parseTokens } from "./tokenize";
+import { settled } from "./types";
 import type {
   DictionaryEntry,
   LearnerSummary,
@@ -169,15 +170,15 @@ export const tutorThread: TutorTurn[] = [
     id: "seed-tutor-1",
     role: "tutor",
     blocks: [
-      {
+      settled({
         kind: "prose",
         text: "〜ていく adds direction: the change moves away from you, over time. The colour didn't just vanish — it kept fading as the train moved.",
-      },
-      { kind: "example", japanese: "色が消えていった", gloss: "kept fading" },
-      {
+      }, 0),
+      settled({ kind: "example", japanese: "色が消えていった", gloss: "kept fading" }, 1),
+      settled({
         kind: "prose",
         text: "〜ていた would just report a state you observed. Swap it in and the snow stops moving.",
-      },
+      }, 2),
     ],
   },
 ];

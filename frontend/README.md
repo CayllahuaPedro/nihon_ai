@@ -30,15 +30,21 @@ word tapped in the reader can be handed to the tutor with its dictionary entry
 as context. What is *not* live is the model behind it.
 
 [`src/lib/tutor.ts`](src/lib/tutor.ts) is the single seam between the tutor UI
-and the model. `streamTutor()` yields answer blocks as they arrive:
+and the model. `streamTutor()` yields `start` / `delta` / `end` / `drop` events,
+so English prose appears token by token behind a caret while a Japanese example
+arrives whole — a sentence reads as a unit. The stand-in answers stream the same
+way, so running without a backend is not a visibly worse demo.
+
+Blocks are matched on the backend's index, never on array position: a dropped
+block would otherwise shift every later block onto the wrong slot.
 
 ```bash
 # frontend/.env.local
 NEXT_PUBLIC_TUTOR_API=http://localhost:8000
 ```
 
-With that set, questions go to the FastAPI backend and the answer streams in
-block by block. Without it the canned answers stand in — **explicitly**: the
+With that set, questions go to the FastAPI backend. Without it the canned
+answers stand in — **explicitly**: the
 panel says so on screen, because a mock that silently impersonates the real
 thing is how you ship a broken tutor without noticing.
 

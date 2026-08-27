@@ -1,4 +1,4 @@
-import type { TutorAsk, TutorBlock } from "./types";
+import type { TutorAsk, TutorBlock, TutorEvent } from "./types";
 
 /* The one seam between the tutor UI and a real model.
  *
@@ -120,10 +120,31 @@ function cannedFor(ask: TutorAsk): TutorBlock[] {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function* streamCanned(ask: TutorAsk): AsyncGenerator<TutorBlock> {
-  for (const [index, block] of cannedFor(ask).entries()) {
+const MOCK_TOKEN_MS = 22;
+
+/** Splits prose the way a model emits it — in chunks, not characters — so the
+ *  stand-in reads at the same pace as the real thing. */
+function tokenise(text: string): string[] {
+  return text.match(/\S+\s*/g) ?? [text];
+}
+
+async function* streamCanned(ask: TutorAsk): AsyncGenerator<TutorEvent> {
+  const blocks = cannedFor(ask);
+
+  for (const [index, block] of blocks.entries()) {
     await wait(index === 0 ? MOCK_FIRST_BLOCK_MS : MOCK_BLOCK_GAP_MS);
-    yield block;
+    yield { type: "start", index, kind: block.kind };
+
+    // Japanese is delivered whole here too, for the same reason the backend
+    // does it: a sentence reads as a unit.
+    if (block.kind === "prose") {
+      for (const token of tokenise(block.text)) {
+        await wait(MOCK_TOKEN_MS);
+        yield { type: "delta", index, text: token };
+      }
+    }
+
+    yield { type: "end", index, block };
   }
 }
 
@@ -164,10 +185,12 @@ async function* frames(
   }
 }
 
+const EVENT_TYPES = new Set(["start", "delta", "end", "drop"]);
+
 async function* streamFromBackend(
   ask: TutorAsk,
   signal?: AbortSignal,
-): AsyncGenerator<TutorBlock> {
+): AsyncGenerator<TutorEvent> {
   let response: Response;
   try {
     response = await fetch(`${API}/tutor`, {
@@ -204,14 +227,14 @@ async function* streamFromBackend(
           "The tutor stopped answering.",
       );
     }
-    if (event === "block") yield JSON.parse(data) as TutorBlock;
+    if (EVENT_TYPES.has(event)) yield JSON.parse(data) as TutorEvent;
   }
 }
 
 export function streamTutor(
   ask: TutorAsk,
   signal?: AbortSignal,
-): AsyncGenerator<TutorBlock> {
+): AsyncGenerator<TutorEvent> {
   return API ? streamFromBackend(ask, signal) : streamCanned(ask);
 }
 

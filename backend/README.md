@@ -27,29 +27,55 @@ API docs at `http://localhost:8000/docs`.
 
 ## The tutor
 
-`POST /tutor` answers a reading question as a **server-sent stream of answer
-blocks**, not as one JSON body:
+`POST /tutor` answers a reading question as a **server-sent stream of block
+events**. A block announces itself, streams its prose as it is written, and
+closes with the validated block:
 
 ```
-event: block
-data: {"kind": "prose", "text": "〜ていく adds direction…"}
+event: start
+data: {"type": "start", "index": 0, "kind": "prose"}
 
-event: block
-data: {"kind": "example", "japanese": "色が消えていった", "gloss": "kept fading"}
+event: delta
+data: {"type": "delta", "index": 0, "text": "It adds "}
+
+event: end
+data: {"type": "end", "index": 0, "block": {"kind": "prose", "text": "It adds direction."}}
 
 event: done
 data: {}
 ```
 
-A *block* is the unit the reader renders, so streaming at that granularity
-means each piece of the answer lands whole — an explanation, then the grammar
-shown working in a quoted sentence, then the next explanation. Claude is asked
-for JSON Lines and `app/services/tutor.py` reassembles them across chunk
-boundaries, since a stream cuts wherever it likes, including mid-line.
+### Why start / delta / end
 
-Malformed lines are dropped rather than rendered broken. If *nothing* parses,
-the raw text is returned as a single prose block — a formatted answer is
-preferable, but an unformatted one still beats showing the learner nothing.
+Streaming and validation pull against each other. `{"kind":"prose","text":"It ad`
+is neither valid JSON nor a valid block — if you want to validate you must wait,
+and if you want to stream you cannot have validated yet.
+
+They are separated in time rather than traded off. A **delta** is unvalidated
+text, safe to show and certain to be superseded. The **end** is the authority:
+it carries the block only once the whole line parsed and passed the Pydantic
+schema in `app/models/tutor.py`. A block that opened and then failed is
+withdrawn with `event: drop`, so nothing half-formed is left on screen.
+
+Pydantic is the schema, not a guarantee — it validates what arrived, it does not
+oblige the model. The API's `output_config.format` *does* oblige, but it
+guarantees one complete JSON object, and a complete object cannot be streamed.
+JSON Lines plus per-line validation buys streaming at the cost of that
+guarantee, and the `drop` event pays for the difference.
+
+### Japanese is not streamed
+
+`prose` streams token by token; `example` arrives whole. A Japanese sentence
+reads as a unit, and watching 色が消えていった assemble itself one character at a
+time helps nobody read it. `_STREAMED_FIELD` in `app/services/tutor.py` is the
+one place that decides this.
+
+### The sharp edge
+
+A stream can stop at any byte, including halfway through `\u30`. Emitting that
+as literal text would be wrong and unrecoverable, so
+`app/services/partial_json.py` decodes only what is unambiguously complete and
+reports how far it got; the remainder waits for the next chunk.
 
 **Level awareness is the point.** The request carries the learner's JLPT level
 and known-word count, and the system prompt pins the answer to grammar at or

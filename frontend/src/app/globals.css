@@ -179,6 +179,18 @@ ruby:hover rt {
   }
 }
 
+/* Marks the end of text that is still being written. */
+@keyframes caret {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.1%,
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes sheet-rise {
   from {
     transform: translateY(12%);
