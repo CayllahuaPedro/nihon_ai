@@ -4,137 +4,223 @@
 
 > Every Japanese learning tool treats difficulty as a property of the text — "this article is N3."
 > It isn't. Difficulty is a function of **the learner × the text**.
-> Nihon AI models the learner first, then uses that model end-to-end: to decide what you
-> read, what flashcards are worth making, and how an AI tutor explains things to you.
+> Nihon AI models the learner first, then uses that model to decide what you read, what is worth
+> mining, and how the AI tutor explains things to you.
 
-![status](https://img.shields.io/badge/status-in%20active%20development-orange)
-![python](https://img.shields.io/badge/python-3.11-blue)
+![status](https://img.shields.io/badge/status-active%20development%20%C2%B7%20phase%200-orange)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![next.js](https://img.shields.io/badge/Next.js-15-black)
 ![license](https://img.shields.io/badge/license-AGPL--3.0-green)
 
 ---
 
-## Who this is for
+## Status
 
-**👩‍💻 If you're an engineer** — This is a full-stack ML _product_, not a notebook. A
-retrieval-augmented LLM tutor constrained by a per-learner **known-set**, a vocabulary-difficulty
-estimator built with **weak supervision**, and an i+1 sentence miner — wired into a FastAPI backend
-and a Next.js frontend, designed to be deployed and actually used.
+This README describes **what the code does today**, not what the project intends to become.
+That distinction is the whole point of the table below: the tutor and the difficulty estimator are
+implemented and tested; the retrieval layer, the learner-model store, and three of the four API
+routes are not.
 
-**🧭 If you're hiring** — Skills demonstrated end-to-end:
-`RAG` · `LLM integration (Anthropic Claude API)` · `prompt engineering` · `known-set / constraint injection` ·
-`embeddings` · `vector search (ChromaDB)` · `NLP` · `weak supervision` · `Python` · `FastAPI` ·
-`Next.js / TypeScript` · `REST API design` · `Docker` · `full-stack development`. Built and shipped
-solo, from dataset to deployment. **Roadmap** adds two fine-tuned Japanese transformers (JLPT
-classifier, grammar-point detector) — see [Coming soon](#-coming-soon).
-
-**🎌 If you're learning Japanese** — The tool I wished existed after 5 years of immersion learning.
-It doesn't make you decide what to study. It looks at what you already know, finds the content
-and sentences that sit exactly at your level (i+1), and gives you a tutor that explains things
-_without_ throwing N1 grammar at you when you're still on N4.
-
----
-
-## What it demonstrates
-
-| Skill | How it's shown |
+| Area | State |
 | --- | --- |
-| RAG + LLM integration | Level-aware tutor: Claude grounded on your text, constrained by your known-set |
-| Personalization / modeling | Per-user "known-set" model that overrides static difficulty labels |
-| NLP / weak supervision | Vocabulary-difficulty estimator (N5–N1 axis) from JLPT lists + an OOV-gated labeling function |
-| Full-stack product design | Next.js frontend + FastAPI backend, deployed |
-| Domain UX | Workflow built for real immersion learners, not a generic demo |
-| Model fine-tuning (roadmap) | JLPT BERT classifier + grammar-point detector — see [Coming soon](#-coming-soon) |
+| Level-aware tutor — `POST /tutor`, streamed over SSE | **Working** (needs `ANTHROPIC_API_KEY`) |
+| Vocabulary-difficulty estimator — weak supervision + abstention | **Working** (Phase 0, CPU-only) |
+| Reader UI — tokenization, furigana modes, word states, popups | **Working** (fixture passage) |
+| Discover UI — shelves, comprehension dial | **Working** (fixture data) |
+| `POST /classify` | **Stub** — returns `{"detail": "not implemented"}` |
+| `GET /mining/queue` | **Stub** |
+| `GET /progress` | **Stub** |
+| Retrieval / embeddings (ChromaDB) | **Not built** — dependency declared, no retrieval code |
+| Learner-model persistence (SQLite) | **Not built** — `DATABASE_URL` is wired, nothing reads it |
+| Fine-tuned JLPT BERT | Roadmap — see [Roadmap](#roadmap) |
+| CI, Docker, deployment | **Not set up** |
+
+144 tests pass across the three units (`53` backend, `25` ML, `66` frontend).
 
 ---
 
-## v1 — Planned features
+## What works today
 
-### 1. Level-Aware AI Tutor — _the centerpiece_
-A RAG chatbot over the text you're reading, powered by the Claude API. The difference: your
-known-set is injected as a **constraint**, so the tutor explains using only grammar and
-vocabulary you already know — and flags passages that are above your current level. This is
-where personalization, retrieval and constraint prompting come together.
+### 1. Level-aware tutor
 
-### 2. Learner Model (your "known-set")
-Nihon AI tracks the vocabulary you mark as known. Difficulty stops being a fixed label and
-becomes **the percentage of tokens that are unknown _to you_**. The vocabulary axis is just the
-starting guess; your own reading history takes over.
+`POST /tutor` streams an answer as server-sent events. The model is asked for JSON Lines — one
+object per line — so each block can announce itself and stream its prose while the rest of the
+object is still being written:
 
-### 3. Vocabulary-Difficulty Estimator
-Difficulty is multi-axis, not one number — so vocabulary is modeled as **its own deliberately
-separated axis**. From public JLPT vocab/kanji lists, an OOV-gated labeling function places a text
-on the **N5–N4–N3–N2–N1** scale (and abstains, rather than faking a level, when the text falls
-outside the JLPT frame). It serves as the **cold-start prior** before the system has learned
-anything about you. _Roadmap: a fine-tuned Japanese BERT that generalizes past the lookup teacher
-— see [Coming soon](#-coming-soon)._
+```
+BlockStart(kind="prose") → BlockDelta("It adds") → BlockDelta(" direction.") → BlockEnd(block)
+```
 
-### 4. Auto-Mining Engine
-Solves the single biggest reason people quit sentence mining: _"I don't know what to mine."_
-Instead of making you curate, Nihon AI surfaces **1T sentences** (sentences with exactly one
-unknown word), ranked by frequency so you spend effort on high-ROI words first.
-You just approve or reject — then export straight to Anki (`.apkg`).
+The interesting part is what happens when the model misbehaves. Validation and streaming pull
+against each other — half an object cannot be validated — so they are **separated in time instead
+of traded off**. Deltas are unvalidated text, shown immediately and explicitly not trusted.
+`BlockEnd` carries the block only after the full line parsed and passed the Pydantic schema. A
+block that opened and then failed is withdrawn with `BlockDrop`, so nothing half-formed stays on
+screen. Deltas are text to show; the `end` is the authority.
+
+Japanese is deliberately **not** streamed: a sentence reads as a unit, and watching
+`色が消えていった` assemble itself character by character helps nobody read it.
+
+- `backend/app/services/tutor.py` — the event stream
+- `backend/app/services/partial_json.py` — incremental string decoding
+- `backend/app/models/tutor.py` — the contract the model's output is held to
+- `backend/app/api/tutor.py` — SSE framing, plus `X-Accel-Buffering: no` so proxies don't buffer
+  the stream into one blob
+
+The learner's level and known-word count are injected into the prompt
+(`backend/app/services/tutor.py:88`), which is what makes the answers level-pinned. This is
+**prompt-level constraint, not retrieval** — see [Status](#status).
+
+### 2. Vocabulary-difficulty estimator
+
+Weak supervision over public JLPT vocab/kanji lists. Three numbers are computed and **never
+fused**: an OOV rate that gates whether the sentence is inside the JLPT frame at all, a
+content-word count that gates whether it is long enough to judge, and — only if both gates pass —
+a level from cumulative coverage over the in-frame tokens.
+
+When either gate fails the labeler returns `ABSTAIN` (`-1`) instead of the nearest level. A model
+that guesses is worse than a model that says "this sentence is outside what I can judge", because
+the guess is indistinguishable from a real answer downstream. `LabelResult` stores the
+ingredients and `weak_label()` is a pure function of them, so a threshold can be re-decided
+without re-tokenizing the corpus.
+
+The gate itself was re-decided once: a flat corpus-wide abstention rate averaged two different
+refusals (high-OOV text vs. sentences too short to judge), so the criterion became
+"≤ 20% refusal on judgeable-length sentences (`n_content >= 3`)" — see
+`docs/superpowers/specs/2026-08-03-short-sentence-gate-design.md`.
+
+- `ml/nihon_ml/tokenize.py` — `fugashi` + UniDic tokenization, OOV frame classification
+- `ml/nihon_ml/jlpt/labeling.py` — the gates and the abstention
+- `ml/nihon_ml/jlpt/spotcheck.py` — scorer for the hand-labelled spot-check set
+- `ml/scripts/` — fetch lists → build dataset → blind labelling → score
+
+### 3. Reader and Discover
+
+Both render from fixtures today; the UI logic underneath is real and tested.
+
+The reader tokenizes a passage into segments (ruby where a reading exists), colors each token
+against the learner model (`known` / `learning` / `selected`), and positions word popups against
+the viewport instead of the page. Display settings persist per learner.
+
+`frontend/src/features/{reader,tutor,discover}/` are self-contained features with an explicit
+public surface (`index.ts`) — and **`dependency-cruiser` enforces the boundaries** in CI-less
+form via `npm run check`. A feature cannot reach into another feature's internals and still pass.
+
+The tutor UI talks to the real backend when `NEXT_PUBLIC_TUTOR_API` is set. Without it, it serves
+canned answers — **and says so on screen** (`tutor-panel.tsx:44`) rather than failing silently,
+because a demo that quietly lies about being live is the worst possible failure mode.
 
 ---
 
 ## Architecture
 
+Three independently runnable units. Only the tutor crosses a process boundary today; the rest is
+either stubbed or fixture-driven, and the diagram says which.
+
 ```
-┌──────────────────────────────────────────────────────────┐
-│                     Next.js Frontend                      │
-│   Reader  ·  AI Tutor  ·  Mining Queue  ·  Dashboard       │
-└───────────────────────────┬────────────────────────────────┘
+frontend (Next.js 15)
+  Reader    ── fixture passage, real tokenization + popups
+  Discover  ── fixture data, real shelf math
+  Tutor     ── HTTP + SSE ──┐
                             │
-┌───────────────────────────▼────────────────────────────────┐
-│                      FastAPI Backend                       │
-│      /classify   ·   /tutor   ·   /mining   ·   /progress   │
-└───┬───────────────┬─────────────────┬──────────────────┬────┘
-    │               │                 │                  │
-    ▼               ▼                 ▼                  ▼
-┌─────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Vocab  │  │ Learner model│  │  ChromaDB    │  │  Claude API  │
-│difficulty│ │ (known-set)  │  │ multilingual │  │  level-aware │
-│ (N5–N1) │  │   SQLite     │  │     -e5      │  │    tutor     │
-└─────────┘  └──────────────┘  └──────────────┘  └──────────────┘
-  (weak-label; BERT fine-tune on the roadmap)
+backend (FastAPI)           ▼
+  /tutor      live      ──► Anthropic Claude API  (level-pinned prompt)
+  /classify   stub
+  /mining     stub
+  /progress   stub
+
+ml (offline, CPU-only)
+  fetch JLPT lists ──► tokenize ──► weak-label (OOV gate + length gate + ABSTAIN)
+                                        │
+                                        └──► spot-check: blind label ──► score
+```
+
+`backend/app/db/` and `CHROMA_PATH` exist as wiring for the learner model and retrieval; nothing
+reads them yet. They are listed under [Status](#status) rather than drawn as if they ran.
+
+---
+
+## Run it
+
+Prerequisites: Python 3.11+, Node 20+.
+
+### Backend
+
+```bash
+cp .env.example backend/.env  # fill in ANTHROPIC_API_KEY (settings read backend/.env)
+cd backend
+python -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/uvicorn app.main:app --reload
+```
+
+`/tutor` returns **503** with an explicit message when `ANTHROPIC_API_KEY` is unset — it does not
+pretend to work. `GET /health` is always available.
+
+### ML pipeline
+
+```bash
+cd ml
+python -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/pytest
+```
+
+The BERT fine-tune lives behind the optional `bert` extra and is not part of the default install,
+so Phase 0 stays light and CPU-only.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev                   # http://localhost:3000
+```
+
+To point the tutor at the backend, add `frontend/.env.local`:
+
+```
+NEXT_PUBLIC_TUTOR_API=http://localhost:8000
+```
+
+### Tests
+
+```bash
+cd backend  && .venv/bin/python -m pytest      # 53 tests
+cd ml       && .venv/bin/python -m pytest      # 25 tests
+cd frontend && npm run check                   # typecheck + arch lint + 66 tests
 ```
 
 ---
 
-## Tech stack
+## Design decisions worth reading
 
-- **ML/NLP** — `fugashi` + UniDic for Japanese tokenization, weak-supervision labeling,
-  `intfloat/multilingual-e5-base` embeddings _(roadmap: PyTorch + HuggingFace Transformers,
-  fine-tuned `cl-tohoku/bert-base-japanese-v3`)_
-- **Backend** — Python 3.11, FastAPI, ChromaDB, SQLite, Anthropic SDK
-- **Frontend** — Next.js 15, TypeScript, Tailwind CSS
-- **Infra** — Docker, HuggingFace Spaces (model), Railway/Vercel (app)
+- **Abstention over a guess.** The labeler refuses to label text outside the JLPT frame or too
+  short to judge. `ml/nihon_ml/jlpt/labeling.py`
+- **`end` is the authority.** Streamed deltas are for the eye; only a schema-validated block is
+  rendered as fact. `backend/app/services/tutor.py`
+- **Fail loudly, not silently.** Unset API key → 503 with a reason. Canned tutor answers → a
+  visible label. `backend/app/api/tutor.py`, `frontend/src/features/tutor/components/tutor-panel.tsx`
+- **Boundaries as executable rules.** Feature isolation is checked by `dependency-cruiser`, not by
+  convention. `frontend/.dependency-cruiser.cjs`
 
 ---
 
-## 🔜 Coming soon
+## Roadmap
 
-Planned beyond the shipped v1 — see the project for full details.
+Not built. Listed so the gap between this repo and the product is explicit.
 
-### Next (post-launch)
-- **Fine-tuned JLPT classifier** — a Japanese BERT trained on the weak-labeled dataset, to
-  generalize past the lookup-based labeling function that ships first.
-- **Grammar Point Detector** — multi-label detection of which Genki/Bunpro grammar points
-  appear in a sentence (the second difficulty axis), for far sharper comprehension estimates
-  than vocabulary alone.
-- **Knowledge-tracing learner model** — model recall decay over time (FSRS in-product; deep
-  knowledge tracing benchmarked on a public multi-user dataset).
-- **Progress Dashboard** — reading volume, JLPT distribution, known-word growth, and a
-  recommended next difficulty ("your comfort zone is N4 — try more N3").
-
-### v2
-- **ASR Pipeline** — generate Japanese subtitles for any YouTube video or audio file, so you're
-  never blocked by a platform not offering Japanese subs in your region.
-- **Subtitle Resync** — realign a drifted `.srt` against the actual audio, line by line —
-  fixing the non-uniform drift that a global offset slider can't.
-- **Burned-in Subtitle OCR** — extract subtitles baked into the video image itself.
-- **Content Recommender** — rank a corpus by _your personal_ comprehension ratio (true i+1).
-- **Output Correction** — write Japanese and get corrections constrained to your level.
+- **Retrieval for the tutor** — ChromaDB + `intfloat/multilingual-e5-base` embeddings over the
+  passage, replacing today's direct prompt with grounded retrieval.
+- **Learner model persistence** — known-set, reading history and progress in SQLite, behind the
+  three stubbed routes.
+- **Auto-mining engine** — surface 1T sentences (exactly one unknown word), ranked by corpus
+  frequency, exportable to Anki.
+- **Fine-tuned JLPT classifier** — `cl-tohoku/bert-base-japanese-v3` trained on the weak-labelled
+  dataset, to generalize past the lookup teacher.
+- **Grammar-point detector** — the second difficulty axis: which Genki/Bunpro points a sentence
+  contains.
+- **CI** — pytest + `npm run check` on every push.
 
 ---
 
@@ -144,12 +230,6 @@ I've spent ~5 years learning Japanese through comprehensible input. The tools ex
 Anki, Yomitan — but they all hand the hard decisions back to the learner: _what's at my level?
 what's worth studying? what does this actually mean, in words I already know?_ Nihon AI is me
 handing that problem to a model — the same problem I had myself.
-
----
-
-## Getting started
-
-> 🚧 Setup instructions will be added as v1 components land.
 
 ---
 

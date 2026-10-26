@@ -1,7 +1,7 @@
 # Nihon AI — Frontend
 
-Next.js 15 (App Router) + TypeScript + Tailwind v4. Deployed independently to
-Vercel with **Root Directory = `frontend`**.
+Next.js 15 (App Router) + TypeScript + Tailwind v4. Runs on its own; not deployed — there is no
+deploy configuration in the repo.
 
 ```bash
 npm install
@@ -61,9 +61,9 @@ The chat is live: turns accumulate, the thread follows the newest answer, and a
 word tapped in the reader can be handed to the tutor with its dictionary entry
 as context. What is *not* live is the model behind it.
 
-[`src/lib/tutor.ts`](src/lib/tutor.ts) is the single seam between the tutor UI
-and the model. `streamTutor()` yields `start` / `delta` / `end` / `drop` events,
-so English prose appears token by token behind a caret while a Japanese example
+[`src/features/tutor/model/stream.ts`](src/features/tutor/model/stream.ts) is the single seam
+between the tutor UI and the model. `streamTutor()` yields `start` / `delta` / `end` / `drop`
+events, so English prose appears token by token behind a caret while a Japanese example
 arrives whole — a sentence reads as a unit. The stand-in answers stream the same
 way, so running without a backend is not a visibly worse demo.
 
@@ -80,7 +80,7 @@ answers stand in — **explicitly**: the
 panel says so on screen, because a mock that silently impersonates the real
 thing is how you ship a broken tutor without noticing.
 
-State lives in [`src/hooks/use-tutor-chat.ts`](src/hooks/use-tutor-chat.ts),
+State lives in [`src/features/tutor/hooks/use-tutor-chat.ts`](src/features/tutor/hooks/use-tutor-chat.ts),
 which aborts an answer the learner has moved on from and distinguishes
 `waiting` (nothing has arrived yet — show the dots) from `thinking` (the answer
 is still growing).
@@ -128,8 +128,9 @@ Both persist to `localStorage` and are read after mount, so SSR stays stable.
 
 ## Data
 
-Everything renders from typed fixtures in [`src/lib/fixtures.ts`](src/lib/fixtures.ts),
-shaped like the responses the FastAPI backend will serve:
+Everything renders from typed fixtures shaped like the responses the backend will serve. The
+shared `learner` lives in [`src/lib/fixtures.ts`](src/lib/fixtures.ts); each feature owns its own
+`fixtures.ts` for the data it renders.
 
 | Fixture                          | Future endpoint |
 | -------------------------------- | --------------- |
@@ -142,7 +143,7 @@ There is no `/discover` or SRS endpoint yet — the Discover shelves are the
 `/mining` selection re-ranked by expected comprehension.
 
 Passage text uses a compact notation parsed by
-[`src/lib/tokenize.ts`](src/lib/tokenize.ts):
+[`src/features/reader/model/tokenize.ts`](src/features/reader/model/tokenize.ts):
 
 ```
 朝|あさ の 電車|でんしゃ#known@densha は 静|しず/か#known@shizuka だった。

@@ -1,18 +1,23 @@
 # Nihon AI — Backend
 
-FastAPI service: JLPT classifier inference, level-aware tutor (RAG + Claude), auto-mining, progress.
+FastAPI service: a level-aware tutor streamed over SSE, plus stubs for the routes that would
+carry the classifier, mining and progress. Only `/tutor` and `/health` do anything today.
 
 ## Layout
 
 ```
 app/
 ├── main.py        # FastAPI app + router wiring
-├── api/           # HTTP routers: classify, tutor, mining, progress
+├── api/           # HTTP routers: tutor (live); classify, mining, progress (stubs)
 ├── core/          # config / settings
-├── services/      # business logic (classifier, learner model, mining, tutor)
-├── models/        # pydantic schemas + SQLAlchemy models
-└── db/            # database session & setup
+├── services/      # tutor event stream + incremental JSON decoding
+├── models/        # Pydantic schemas — the tutor block contract
+└── db/            # empty; reserved for the learner model
 ```
+
+There is no retrieval layer. `/tutor` sends the question and the learner's level straight to
+Claude; `chromadb`, `transformers`, `torch`, `fugashi` and `sqlalchemy` are declared dependencies
+that no module under `app/` imports yet.
 
 ## Dev
 
