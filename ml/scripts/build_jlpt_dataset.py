@@ -18,8 +18,8 @@ import sys
 import pandas as pd
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from nihon_ml.jlpt.labeling import label_sentence  # noqa: E402
-from nihon_ml.jlpt.lists import load_jlpt_levels  # noqa: E402
+from nihon_ml.jlpt.labeling import label_sentence
+from nihon_ml.jlpt.lists import load_jlpt_levels
 
 _DATA = pathlib.Path(__file__).resolve().parents[1] / "data"
 _TATOEBA = _DATA / "raw" / "tatoeba_jpn.tsv"
@@ -74,7 +74,7 @@ def main() -> None:
     has_frame = df["n_in_frame"] > 0
     stats = {
         "corpus": "tatoeba jpn (CC-BY 2.0 FR)",
-        "n_sentences": int(len(df)),
+        "n_sentences": len(df),
         "n_with_no_content": int((df["n_content"] == 0).sum()),
         "n_with_in_frame_tokens": int(has_frame.sum()),
         "oov_rate": {

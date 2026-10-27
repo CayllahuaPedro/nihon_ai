@@ -110,9 +110,7 @@ def test_does_not_leak_the_upstream_message_to_the_client():
 
 
 def test_rejects_an_empty_question():
-    response = client_with(FakeAnthropic([PROSE])).post(
-        "/tutor", json={**ASK, "question": ""}
-    )
+    response = client_with(FakeAnthropic([PROSE])).post("/tutor", json={**ASK, "question": ""})
 
     assert response.status_code == 422
 

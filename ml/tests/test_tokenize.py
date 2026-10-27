@@ -4,13 +4,13 @@ from nihon_ml.tokenize import IGNORE, OOV_FRAME, TRACKABLE, tokens
 
 
 def _by_surface(text, surface):
-    return [t for t in tokens(text) if t.surface == surface][0]
+    return next(t for t in tokens(text) if t.surface == surface)
 
 
 def test_conjugations_collapse_to_one_key():
     expected = "食べる|タベル|動詞"
     for sentence in ("ご飯を食べる", "ご飯を食べた", "ご飯を食べて", "ごはんをたべる"):
-        verb = [t for t in tokens(sentence) if t.pos1 == "動詞"][0]
+        verb = next(t for t in tokens(sentence) if t.pos1 == "動詞")
         assert verb.item_key == expected, sentence
 
 

@@ -7,6 +7,7 @@
 > Nihon AI models the learner first, then uses that model to decide what you read, what is worth
 > mining, and how the AI tutor explains things to you.
 
+[![CI](https://github.com/CayllahuaPedro/nihon_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/CayllahuaPedro/nihon_ai/actions/workflows/ci.yml)
 ![status](https://img.shields.io/badge/status-active%20development%20%C2%B7%20phase%200-orange)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![next.js](https://img.shields.io/badge/Next.js-15-black)

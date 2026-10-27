@@ -9,7 +9,7 @@ from nihon_ml.tokenize import OOV_FRAME, TRACKABLE, tokens
 
 
 def key_of(word):
-    t = [t for t in tokens(word) if t.frame_bucket in (TRACKABLE, OOV_FRAME)][0]
+    t = next(t for t in tokens(word) if t.frame_bucket in (TRACKABLE, OOV_FRAME))
     return t.item_key
 
 
