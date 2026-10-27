@@ -23,7 +23,7 @@ import urllib.request
 from collections import defaultdict
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from nihon_ml.jlpt.lists import headword_to_item_key  # noqa: E402
+from nihon_ml.jlpt.lists import headword_to_item_key
 
 _DATA = pathlib.Path(__file__).resolve().parents[1] / "data"
 _RAW = _DATA / "raw" / "jlpt"
@@ -54,9 +54,7 @@ def _extract_vocab(db_path: pathlib.Path) -> list[tuple[str, str]]:
     try:
         name_by_fm = dict(con.execute("select id, name from fieldModels"))
         by_fact: dict[int, dict[str, str]] = defaultdict(dict)
-        for fact_id, fm_id, value in con.execute(
-            "select factId, fieldModelId, value from fields"
-        ):
+        for fact_id, fm_id, value in con.execute("select factId, fieldModelId, value from fields"):
             by_fact[fact_id][name_by_fm.get(fm_id, "")] = value
     finally:
         con.close()
@@ -91,8 +89,14 @@ def _normalize_level(n: int) -> dict:
             lemma, reading, pos = key.split("|")
             writer.writerow([key, lemma, reading, pos, ordinal, surface, source_reading])
             kept += 1
-    return {"level": f"n{n}", "ordinal": ordinal, "headwords": len(raw),
-            "kept": kept, "skipped_multitoken": skipped, "csv": str(out_path)}
+    return {
+        "level": f"n{n}",
+        "ordinal": ordinal,
+        "headwords": len(raw),
+        "kept": kept,
+        "skipped_multitoken": skipped,
+        "csv": str(out_path),
+    }
 
 
 def main() -> None:
@@ -102,14 +106,19 @@ def main() -> None:
 
     stats = [_normalize_level(n) for n in args.levels]
     (_OUT / "stats.json").write_text(
-        json.dumps({"source": "tanos.co.uk JLPT vocab (reconstructed N5-N1)", "levels": stats},
-                   ensure_ascii=False, indent=2),
+        json.dumps(
+            {"source": "tanos.co.uk JLPT vocab (reconstructed N5-N1)", "levels": stats},
+            ensure_ascii=False,
+            indent=2,
+        ),
         encoding="utf-8",
     )
     for s in stats:
         rate = s["skipped_multitoken"] / s["headwords"] if s["headwords"] else 0
-        print(f"{s['level']}: {s['kept']} kept, {s['skipped_multitoken']} skipped "
-              f"({rate:.1%} multi-token) -> {s['csv']}")
+        print(
+            f"{s['level']}: {s['kept']} kept, {s['skipped_multitoken']} skipped "
+            f"({rate:.1%} multi-token) -> {s['csv']}"
+        )
 
 
 if __name__ == "__main__":

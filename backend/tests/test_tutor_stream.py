@@ -39,9 +39,7 @@ async def test_a_prose_block_opens_streams_and_closes():
 
 @pytest.mark.asyncio
 async def test_prose_text_arrives_across_several_deltas():
-    events = await collect(
-        ['{"kind":"prose","te', 'xt":"It adds', ' direction."', "}\n"]
-    )
+    events = await collect(['{"kind":"prose","te', 'xt":"It adds', ' direction."', "}\n"])
 
     deltas = [e for e in events if isinstance(e, BlockDelta)]
     assert len(deltas) > 1, "the answer arrived in one piece, not streamed"

@@ -141,9 +141,7 @@ class _LineScanner:
                 return events
             self._value_at = opening.end()
 
-        chunk, closed, consumed = decode_partial_string(
-            self.raw[self._value_at + self._cursor :]
-        )
+        chunk, closed, consumed = decode_partial_string(self.raw[self._value_at + self._cursor :])
         self._cursor += consumed
         self._value_closed = closed
 

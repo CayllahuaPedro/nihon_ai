@@ -15,9 +15,7 @@ def test_parses_a_prose_block():
 
 
 def test_parses_an_example_block():
-    block = parse_block(
-        {"kind": "example", "japanese": "色が消えていった", "gloss": "kept fading"}
-    )
+    block = parse_block({"kind": "example", "japanese": "色が消えていった", "gloss": "kept fading"})
 
     assert isinstance(block, ExampleBlock)
     assert block.japanese == "色が消えていった"
@@ -45,9 +43,7 @@ def test_rejects_a_non_string_field():
 
 def test_drops_fields_the_schema_does_not_declare():
     """A model that volunteers extra keys must not widen the wire format."""
-    block = parse_block(
-        {"kind": "prose", "text": "kept", "confidence": 0.9, "note": "ignore me"}
-    )
+    block = parse_block({"kind": "prose", "text": "kept", "confidence": 0.9, "note": "ignore me"})
 
     assert block.model_dump() == {"kind": "prose", "text": "kept"}
 

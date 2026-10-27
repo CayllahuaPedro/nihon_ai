@@ -10,7 +10,7 @@ from app.services.partial_json import decode_partial_string
 
 
 def test_decodes_a_plain_prefix():
-    assert decode_partial_string('It adds') == ("It adds", False, 7)
+    assert decode_partial_string("It adds") == ("It adds", False, 7)
 
 
 def test_reports_the_closing_quote():
@@ -26,11 +26,11 @@ def test_stops_at_the_closing_quote_and_leaves_the_rest():
 
 
 def test_decodes_an_escaped_quote():
-    assert decode_partial_string(r'say \"hi\"')[0] == 'say "hi"'
+    assert decode_partial_string(r"say \"hi\"")[0] == 'say "hi"'
 
 
 def test_decodes_an_escaped_backslash():
-    assert decode_partial_string(r'a\\b')[0] == "a\\b"
+    assert decode_partial_string(r"a\\b")[0] == "a\\b"
 
 
 def test_a_closing_quote_after_an_escaped_backslash_still_closes():
@@ -40,22 +40,22 @@ def test_a_closing_quote_after_an_escaped_backslash_still_closes():
 
 
 def test_decodes_newline_and_tab_escapes():
-    assert decode_partial_string(r'a\nb\tc')[0] == "a\nb\tc"
+    assert decode_partial_string(r"a\nb\tc")[0] == "a\nb\tc"
 
 
 def test_decodes_a_unicode_escape():
-    assert decode_partial_string(r'雪')[0] == "雪"
+    assert decode_partial_string(r"雪")[0] == "雪"
 
 
 def test_withholds_a_dangling_backslash():
     """The next chunk decides what this escape is."""
-    text, _, consumed = decode_partial_string('ok\\')
+    text, _, consumed = decode_partial_string("ok\\")
 
     assert (text, consumed) == ("ok", 2)
 
 
 def test_withholds_a_truncated_unicode_escape():
-    text, _, consumed = decode_partial_string(r'snow \u96')
+    text, _, consumed = decode_partial_string(r"snow \u96")
 
     assert (text, consumed) == ("snow ", 5)
 
